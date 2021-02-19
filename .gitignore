@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+py2048/__pycache__/
+py2048/frontends/__pycache__/
+
+*.py[cod]
+*$py.class
+
+# temporary and backup files
+*~
+*.bak
+
+# shell scripts
+*.sh
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+MANIFEST*
