@@ -13,7 +13,7 @@ def read(name: str) -> None:
 
 
 setuptools.setup(
-    name=f"{APPNAME}-danieldiniz" if TESTING else APPNAME,
+    name=f"{APPNAME}-danieldiniz" if TESTING else f"{APPNAME}base",
     version=VERSION,
     author="Daniel Diniz",
     author_email="daniel_asl_diniz@protonmail.com",

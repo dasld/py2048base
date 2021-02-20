@@ -5,7 +5,7 @@ py2048
 **py2048** is a clone of the famous game
 `2048 <https://play2048.co/>`_,
 by
-`Gabrielli Cirulli <http://gabrielecirulli.com/>`_.
+`Gabriele Cirulli <http://gabrielecirulli.com/>`_.
 It's probably not very interesting to people looking for playing 2048, but may
 be useful for people looking for learning Python (and some popular Python
 packages, such as `PyQt`).
