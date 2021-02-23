@@ -42,7 +42,7 @@ from itertools import count, repeat
 from more_itertools import unzip
 
 
-__version__ = (0, 1)
+__version__ = (0, 2)
 
 
 ## CONSTANTS
@@ -77,7 +77,30 @@ COPY_FOOTER = (
     "This is free software, and you are welcome to redistribute it under "
     "certain conditions."
 )
-TESTING = False
+TESTING = True
+
+
+__all__ = [
+    # global variables
+    "ENTRY_POINT",
+    "IS_FROZEN",
+    "BUNDLE_DIR",
+    # generic functions
+    "iscontainer",
+    "type_check",
+    "check_int",
+    # exceptions
+    "Base2048Error",
+    "NegativeIntegerError",
+    "ExpectationError",
+    # generic classes
+    "Point",
+    "Directions",
+    "GridIndex",
+    # game grid classes
+    "BaseGameGrid",
+    "SquareGameGrid",
+]
 
 
 ## GENERAL-PURPOSE FUNCTIONS

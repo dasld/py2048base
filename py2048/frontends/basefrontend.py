@@ -70,7 +70,7 @@ class Base2048Frontend(ABC):
         self.goal = goal
         self.victory = False
 
-    # play hooks: don't need to be overriden, but probabily should
+    # play hooks: don't need to be overriden, but probably should
     def on_play(self) -> Any:
         pass
 
