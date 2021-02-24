@@ -20,7 +20,7 @@ setuptools.setup(
     description="Python clone of the famous 2048 game.",
     long_description=read("README.rst"),
     long_description_content_type="text/x-rst",
-    url = "https://github.com/dasld/py2048",
+    url = "https://github.com/dasld/py2048base",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

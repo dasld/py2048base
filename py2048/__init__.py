@@ -77,7 +77,7 @@ COPY_FOOTER = (
     "This is free software, and you are welcome to redistribute it under "
     "certain conditions."
 )
-TESTING = True
+TESTING = False
 
 
 __all__ = [
