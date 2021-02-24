@@ -23,11 +23,11 @@ import sys
 from pathlib import Path
 import random
 
-from py2048 import APPNAME, BUNDLE_DIR, Directions, type_check
+from py2048 import Directions, type_check
 from py2048.grid import Grid
 
 
-SOUND_PATH: Path = BUNDLE_DIR / Path("assets/sounds/")
+DIRECTIONS_TUPLE = tuple(Directions)
 
 
 class Base2048Frontend(ABC):
@@ -93,7 +93,7 @@ class Base2048Frontend(ABC):
         pass
 
     def guess_direction(self) -> Directions:
-        return random.choice(tuple(Directions))
+        return random.choice(DIRECTIONS_TUPLE)
 
     # MAIN LOOP: shouldn't be overriden
     @final
@@ -127,7 +127,7 @@ class Base2048Frontend(ABC):
                 # Ctrl-D or quit-command
                 player_quit = True
                 break
-            assert choice in Directions
+            assert choice in DIRECTIONS_TUPLE
             self.after_choice(choice)
             dragged = grid.drag(choice)
             if dragged:

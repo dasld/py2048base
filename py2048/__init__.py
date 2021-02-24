@@ -42,12 +42,14 @@ from itertools import count, repeat
 from more_itertools import unzip
 
 
-__version__ = (0, 2)
+__version__ = (0, 3)
+TESTING = True
 
 
 ## CONSTANTS
 # Generic constants
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
+APPNAME = __name__
 ModuleType = type(sys)  # just for annotation purposes
 Vector = Sequence[int]
 # https://github.com/python/typing/issues/684#issuecomment-548203158
@@ -62,29 +64,11 @@ else:
 EMPTY_TUPLE = tuple()  # dummy used in `min` and `max` calls
 INFTY = float("inf")
 NULL_SLICE = slice(None)
-# App-specific constants
-# https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
-APPNAME = __name__
-VERSION = ".".join(map(str, __version__))
-DEFAULT_FRONTENDS = ["PyQt", "curses", "cli"]
-ENTRY_POINT = "play2048"
-IS_FROZEN = getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
-BUNDLE_DIR = Path(sys._MEIPASS) if IS_FROZEN else Path(__file__).parent
-CR = chr(169)  # copyright character
-COPY_FOOTER = (
-    f"{APPNAME}  Copyright {CR} 2021  Daniel Diniz\n"
-    "This program comes with ABSOLUTELY NO WARRANTY.\n"
-    "This is free software, and you are welcome to redistribute it under "
-    "certain conditions."
-)
-TESTING = False
 
 
 __all__ = [
     # global variables
-    "ENTRY_POINT",
-    "IS_FROZEN",
-    "BUNDLE_DIR",
+    "INFTY",
     # generic functions
     "iscontainer",
     "type_check",
