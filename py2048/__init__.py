@@ -42,6 +42,7 @@ from itertools import count, repeat
 from more_itertools import unzip
 
 
+APPNAME = __name__
 __version__ = (0, 3)
 TESTING = True
 
@@ -49,7 +50,6 @@ TESTING = True
 ## CONSTANTS
 # Generic constants
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
-APPNAME = __name__
 ModuleType = type(sys)  # just for annotation purposes
 Vector = Sequence[int]
 # https://github.com/python/typing/issues/684#issuecomment-548203158

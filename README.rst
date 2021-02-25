@@ -29,6 +29,24 @@ Features
   random direction! More useful for testing than actual gameplay...
 
 
+**********
+How to use
+**********
+
+Subclass the class `py2048.basefrontend.Base2048Frontend` and override the
+following methods:
+
+* `choose_direction`
+* `player_quit`
+* `player_victory`
+* `player_loss`
+
+`choose_direction` must return exactly one `py2048.Directions` object.
+The other methods shouldn't return anything.
+`player_quit` is called when the player exits the game before winning or
+losing.
+
+
 Wishlist
 ========
 

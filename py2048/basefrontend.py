@@ -158,7 +158,7 @@ class Base2048Frontend(ABC):
         self.player_loss()
 
     # the following methods MUST be overriden
-    def choice_function(self) -> str:
+    def choice_function(self) -> Directions:
         raise NotImplementedError(
             "'choice_function' must be overriden by subclass"
         )
