@@ -26,15 +26,15 @@ Features
   methods, you can make the game look any way you want, without touching the
   basic game logic;
 * Automatic mode: you can replace human input with a function that picks a
-  random direction! More useful for testing than actual gameplay...
+  random direction! More useful for testing than actual gameplay, though.
 
 
 **********
 How to use
 **********
 
-Subclass the class `py2048.basefrontend.Base2048Frontend` and override the
-following methods:
+Subclass `py2048.basefrontend.Base2048Frontend` and override the following
+methods:
 
 * `choose_direction`
 * `player_quit`

@@ -32,7 +32,7 @@ setuptools.setup(
         "appdirs>=1",
         "more-itertools>=8",
     ],
-    packages=[APPNAME, f"{APPNAME}.frontends",],
+    packages=[APPNAME],
     python_requires=">=3.8",
     license="GPL",
     zip_safe=True,
