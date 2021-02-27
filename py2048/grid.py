@@ -54,6 +54,8 @@ class Grid(SquareGameGrid):
         self.empty_cells: Set[Cell] = set(self.cells())
         self.reset(first=True)
 
+    cells = values
+
     def reset(self, first: bool = False) -> None:
         self.attempt = 0
         self.cycle = 0

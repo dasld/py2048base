@@ -26,7 +26,8 @@ from py2048 import check_int, Point, type_check
 class Cell:
     def __init__(self, point: Point, number: int = 0) -> None:
         type_check(point, Point)
-        self.point = self.x, self.y = point
+        self.point = point
+        self.x, self.y = point
         self._lock = False
         # don't use self._number here; we want bad initial values to be
         # detected

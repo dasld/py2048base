@@ -348,7 +348,6 @@ class BaseGameGrid(ABC):
     # some synonyms
     __iter__ = keys
     points = keys
-    cells = values
 
     def __len__(self) -> int:
         # this also provides __bool__

@@ -55,9 +55,15 @@ class Base2048Frontend(ABC):
         self.grid.reset()
         self.grid.seed()
 
-    def __init__(self, grid: Grid, *, goal: Optional[int] = None):
+    def __init__(
+        self,
+        grid: Grid,
+        is_random: bool,
+        *,  # makes the remaining arguments keyword-only
+        goal: Optional[int] = None,
+    ) -> None:
+        # first, perform some checks
         type_check(grid, Grid)
-        self.grid = grid
         # `goal = goal or 2048` would allow "goal = 0" to pass silently
         if goal is None:
             goal = 2048
@@ -65,7 +71,14 @@ class Base2048Frontend(ABC):
             raise OverflowError(f"the value {goal} is too big of a goal")
         elif not self.is2048like(goal):
             raise ValueError("goal must be a positive power of 2")
+        # checks passed
+        self.grid = grid
         self.goal = goal
+        if is_random:
+            self.choice_function = self.guess_direction
+        else:
+            self.choice_function = self.choose_direction
+        self.is_random = is_random
         self.victory = False
 
     # play hooks: don't need to be overriden, but probably should
@@ -155,9 +168,9 @@ class Base2048Frontend(ABC):
         self.player_loss()
 
     # the following methods MUST be overriden
-    def choice_function(self) -> Directions:
+    def choose_direction(self) -> Directions:
         raise NotImplementedError(
-            "'choice_function' must be overriden by subclass"
+            "'choose_direction' must be overriden by subclass"
         )
 
     def player_quit(self) -> Any:
