@@ -27,9 +27,6 @@ from py2048 import Directions, type_check
 from py2048.grid import Grid
 
 
-DIRECTIONS_TUPLE = tuple(Directions)
-
-
 class Base2048Frontend(ABC):
     """This abstract class implements the `play2048` method. A concrete
     frontend should inherit from this class, but shouldn't override this
@@ -41,6 +38,7 @@ class Base2048Frontend(ABC):
     # 2^11 == 2048
     # sys.maxsize == (2^63) - 1 on 64bits machines
     valid_numbers: List[int] = [2 ** power for power in range(1, 12)]
+    DIRECTIONS = tuple(Directions)
     SLEEP_S = 1  # how many seconds to sleep when in auto mode
     # converting seconds to mseconds
     SLEEP_MS = int(SLEEP_S * 1_000)
@@ -93,7 +91,7 @@ class Base2048Frontend(ABC):
         pass
 
     def guess_direction(self) -> Directions:
-        return random.choice(DIRECTIONS_TUPLE)
+        return random.choice(self.DIRECTIONS)
 
     # MAIN LOOP: shouldn't be overriden
     @final
@@ -127,7 +125,7 @@ class Base2048Frontend(ABC):
                 # Ctrl-D or quit-command
                 player_quit = True
                 break
-            assert choice in DIRECTIONS_TUPLE
+            assert choice in self.DIRECTIONS
             self.after_choice(choice)
             dragged = grid.drag(choice)
             if dragged:
@@ -135,9 +133,8 @@ class Base2048Frontend(ABC):
                 jammed = grid.jammed
             else:
                 self.after_nochange(choice)
-            grid.attempt += 1
             self.after_attempt(choice)
-            if not self.victory and grid.biggest >= self.goal:
+            if not self.victory and grid.largest_number >= self.goal:
                 self.victory = True
                 break
         # after loop stuff

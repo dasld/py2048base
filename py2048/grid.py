@@ -42,11 +42,10 @@ logger = logging.getLogger(__name__)
 
 class Grid(SquareGameGrid):
     CELLCLASS: type = Cell
-    starting_amount: int = 2  # how many points start non-zero
-    starting_values: Tuple[int, ...] = (
-        2,
-        4,
-    )  # what values can be seeded in each cell
+    # how many points start non-zero
+    starting_amount: int = 2
+    # what values can be seeded in each cell
+    starting_values: Tuple[int, ...] = (2, 4)
 
     def __init__(self, side: int = 4) -> None:
         assert 0 < self.starting_amount < side ** 2
@@ -56,9 +55,9 @@ class Grid(SquareGameGrid):
         self.reset(first=True)
 
     def reset(self, first: bool = False) -> None:
-        self.score: int = 0
-        self.cycle: int = 0
-        self.attempt: int = 0
+        self.attempt = 0
+        self.cycle = 0
+        self.score = 0
         if not first:
             for cell in self.values():
                 if cell:
@@ -67,7 +66,7 @@ class Grid(SquareGameGrid):
         self.check_integrity()
 
     @property
-    def biggest(self) -> int:
+    def largest_number(self) -> int:
         return max([cell.number for cell in self.cells()], default=0)
 
     @property
@@ -149,7 +148,6 @@ class Grid(SquareGameGrid):
         current = last = cell
         while True:
             current = self.neighbor(current, to)
-            # print(f"{current = }")
             if current is None:  # edge of the board; give up
                 return last
             if not current:  # empty Cell; keep looking
@@ -171,8 +169,7 @@ class Grid(SquareGameGrid):
         if not cell:  # empty Cells don't move
             return False
         pivot = self.pivot(cell, to)
-        # print(f">>> {direction} {pivot=}")
-        if pivot.point == cell.point:  # they are the same Cell
+        if pivot == cell:
             return False
         new_number = cell.number + pivot.number
         if pivot:
@@ -184,20 +181,20 @@ class Grid(SquareGameGrid):
         return True
 
     def drag(self, to: Directions) -> bool:
-        """Attempts to move every cell in the given direction, starting with
-        the vectors closest to this direction.
-        If anything changed, increment the `Grid`'s cycle by 1 and seed it by
+        """Increments its attempts count, then tries to move every cell in the
+        given direction, starting with the vectors closest to this direction.
+        If anything changed, it increments its cycle by 1 and seeds itself by
         1.
         """
 
         if to == Directions.LEFT:
-            vectors = self.columns
+            vectors = tuple(self.columns)
         elif to == Directions.RIGHT:
-            vectors = self.columns[::-1]
+            vectors = tuple(self.columns)[::-1]
         elif to == Directions.UP:
-            vectors = self.rows
+            vectors = tuple(self.rows)
         elif to == Directions.DOWN:
-            vectors = self.rows[::-1]
+            vectors = tuple(self.rows)[::-1]
         elif isinstance(to, Directions):
             # very bad
             raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
@@ -205,6 +202,8 @@ class Grid(SquareGameGrid):
             # EVEN WORSE
             raise ExpectationError(to, Directions)
         something_moved = False
+        self.attempt += 1
+        logger.debug("Attempt increased to %d.", self.attempt)
         for cell in chain.from_iterable(vectors):
             this_moved = self.move_cell(cell, to)
             # assert isinstance(moved, bool)
@@ -231,10 +230,8 @@ class Grid(SquareGameGrid):
         Is there a better/faster way of doing this without checking every Cell?
         """
 
-        if self.empty_cells:
-            logger.debug(
-                "Not jammed: still %d empty cell(s).", len(self.empty_cells)
-            )
+        if empties := len(self.empty_cells):
+            logger.debug("Not jammed: still %d empty cell(s).", empties)
             return False
         for cell in self.cells():
             for to in Directions:

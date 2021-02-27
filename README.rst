@@ -82,7 +82,7 @@ it is up to each frontend to actually collect user input and respond by
 displaying the game data as a (hopefully) pretty interface.
 Each frontend is a Python class that inherits from `Base2048Frontend`, the only
 frontend-related implementation in this package.
-This basis class contains the main game loop that runs until a tile numbered
+This base class contains the main game loop that runs until a tile numbered
 with the winning condition has formed or the player has no valid movements
 available.
 

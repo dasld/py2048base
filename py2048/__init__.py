@@ -39,6 +39,7 @@ from collections import namedtuple
 from collections.abc import Sequence as AbsSequence
 from enum import auto, Enum, unique
 from itertools import count, repeat
+
 from more_itertools import unzip
 
 
@@ -110,7 +111,7 @@ def type_check(
         match = type(value) in expected
     else:
         match = isinstance(value, expected)
-    if (positive and not match) or (not positive and match):
+    if match != positive:
         raise ExpectationError(value, expected, positive=positive)
 
 
@@ -202,14 +203,14 @@ class Point(namedtuple("Point", "x y")):
         return f"<{self.x},{self.y}>"
 
 
-Line = Sequence[Point]
+Line = Tuple[Point]
 
 
 @unique
 class Directions(Enum):
     """Enumerates the four orthogonal directions in the WASD order. The value
-    of each direction is it's lowercased name: `Directions.UP == "up"`, and so
-    on.
+    of each direction is it's lowercased name: `Directions.UP.value == "up"`,
+    and so on.
     """
 
     def _generate_next_value_(name, start, count, last_values) -> str:
@@ -273,13 +274,14 @@ class GridIndex:
             x = NULL_SLICE
         if y is Ellipsis:
             y = NULL_SLICE
-        for i in (x, y):
+        pair = (x, y)
+        for i in pair:
             if not isinstance(i, slice):
                 check_int(i)
         self.x = x
         self.y = y
-        self.xy = (x, y)
-        self._str = str(self.xy)
+        self.xy = pair
+        self._str = str(pair)
 
     def __iter__(self) -> Iterator:
         return iter(self.xy)
@@ -344,7 +346,8 @@ class BaseGameGrid(ABC):
         return iter(((k, self.map[k]) for k in self.keys()))
 
     # some synonyms
-    points = __iter__ = keys
+    __iter__ = keys
+    points = keys
     cells = values
 
     def __len__(self) -> int:
@@ -357,32 +360,38 @@ class BaseGameGrid(ABC):
         return NotImplemented
 
     @property
-    def x_axis(self) -> Tuple[int, ...]:
-        every_x = unzip(self)[0]
-        return tuple(sorted(set(every_x)))
+    def x_axis(self) -> Iterator[int]:
+        yielded = set()
+        for x in unzip(self.keys())[0]:
+            if x not in yielded:
+                yield x
+                yielded.add(x)
 
     @property
-    def y_axis(self) -> Tuple[int, ...]:
-        every_y = unzip(self)[1]
-        return tuple(sorted(set(every_y)))
+    def y_axis(self) -> Iterator[int]:
+        yielded = set()
+        for y in unzip(self.keys())[1]:
+            if y not in yielded:
+                yield y
+                yielded.add(y)
 
     @property
     def height(self) -> int:
-        return len(self.y_axis)
+        return len(tuple(self.y_axis))
 
     @property
     def width(self) -> int:
-        return len(self.x_axis)
+        return len(tuple(self.x_axis))
 
     @property
-    def rows(self) -> Tuple:
-        ygenerator = (self[..., y] for y in self.y_axis)
-        return tuple(ygenerator)
+    def rows(self) -> Iterator[Line]:
+        for y in self.y_axis:
+            yield self[..., y]
 
     @property
-    def columns(self) -> Tuple:
-        xgenerator = (self[x] for x in self.x_axis)
-        return tuple(xgenerator)
+    def columns(self) -> Iterator[Line]:
+        for x in self.x_axis:
+            yield self[x]
 
     def check_integrity(self) -> None:
         # check columns
@@ -393,15 +402,15 @@ class BaseGameGrid(ABC):
                 raise ValueError(
                     f"Wrong column index {actual}; must be {target}"
                 )
-        shortest = min(self.columns, default=EMPTY_TUPLE)
-        longest = max(self.columns, default=EMPTY_TUPLE)
+        shortest = min(tuple(self.columns), default=EMPTY_TUPLE)
+        longest = max(tuple(self.columns), default=EMPTY_TUPLE)
         assert len(shortest) == len(longest)
         # check rows
         for actual, target in zip(self.y_axis, count()):
             if actual != target:
                 raise ValueError(f"Wrong row index {actual}; must be {target}")
-        shortest = min(self.rows, default=EMPTY_TUPLE)
-        longest = max(self.rows, default=EMPTY_TUPLE)
+        shortest = min(tuple(self.rows), default=EMPTY_TUPLE)
+        longest = max(tuple(self.rows), default=EMPTY_TUPLE)
         assert len(shortest) == len(longest)
         # type check and total size check
         for value in self.values():
@@ -417,9 +426,8 @@ class BaseGameGrid(ABC):
         step = s.step or 1
         return range(start, stop, step)
 
-    def select_keys(self, key: GridIndex.Type) -> Tuple[Point, ...]:
+    def select_keys(self, key: GridIndex.Type) -> Line:
         x, y = GridIndex(key)
-        # print(f"{x=}, {y=}")
         restrictions: Set[Callable] = set()
         # restricting the X-axis
         if isinstance(x, int):
@@ -493,7 +501,7 @@ class BaseGameGrid(ABC):
         return f"{cls}('{cellclass}', {w} x {h})"
 
     def __str__(self) -> str:
-        return "\n".join(map(repr, self.rows))
+        return "\n".join(map(repr, tuple(self.rows)))
 
 
 class SquareGameGrid(BaseGameGrid):
@@ -507,7 +515,7 @@ class SquareGameGrid(BaseGameGrid):
         super().check_integrity()
         if self.width != self.height:
             raise ValueError(
-                f"A SquareGameGrid cannot have different side lenghts, but "
+                "A SquareGameGrid cannot have different side lenghts, but "
                 f"width is {self.width} and height is {self.height}"
             )
 
@@ -529,8 +537,9 @@ def demonstration() -> None:
     print(g)
     print("-" * 79)
 
-    print(g.rows)
-    print(g.columns)
+    rows, cols = tuple(g.rows), tuple(g.columns)
+    print(rows)
+    print(cols)
     print(g[1:, 1:])
 
 
