@@ -44,7 +44,7 @@ from more_itertools import unzip
 
 
 APPNAME = __name__
-__version__ = (0, 6)
+__version__ = (0, 7)
 VERSION = ".".join(map(str, __version__))
 TESTING = False
 
@@ -283,10 +283,10 @@ class GridIndex:
         self.xy = pair
         self._str = str(pair)
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[SingletonType]:
         return iter(self.xy)
 
-    def __getitem__(self, key) -> SingletonType:
+    def __getitem__(self, key: int) -> SingletonType:
         return self.xy[key]
 
     def __eq__(self, other) -> bool:
@@ -317,7 +317,7 @@ class BaseGameGrid(ABC):
     of that class.
     """
 
-    CELLCLASS: object = None
+    CELLCLASS: Any = None
 
     def __init__(self, width: int, height: int) -> None:
         cls = self.CELLCLASS

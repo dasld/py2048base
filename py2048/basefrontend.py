@@ -50,7 +50,7 @@ class Base2048Frontend(ABC):
             cache.append(cache[-1] * 2)
         return n in cache
 
-    def reset(self) -> None:
+    def restart(self) -> None:
         self.victory = False
         self.grid.reset()
         self.grid.seed()

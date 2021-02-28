@@ -42,26 +42,26 @@ logger = logging.getLogger(__name__)
 
 class Grid(SquareGameGrid):
     CELLCLASS: type = Cell
-    # how many points start non-zero
-    starting_amount: int = 2
+    # how many cells start non-zero
+    STARTING_AMOUNT = 2
     # what values can be seeded in each cell
-    starting_values: Tuple[int, ...] = (2, 4)
-
-    def __init__(self, side: int = 4) -> None:
-        assert 0 < self.starting_amount < side ** 2
-        logger.info("Creating a %dx%d Grid instance", side, side)
-        super().__init__(side)
-        self.empty_cells: Set[Cell] = set(self.cells())
-        self.reset(first=True)
+    SEEDING_VALUES = (2, 4)
 
     cells = SquareGameGrid.values
 
-    def reset(self, first: bool = False) -> None:
+    def __init__(self, side: int = 4) -> None:
+        logger.info("Creating a %dx%d Grid instance", side, side)
+        assert 0 < self.STARTING_AMOUNT < side ** 2
+        super().__init__(side)
+        self.empty_cells: Set[Cell] = set(self.cells())
+        self.reset(on_init=True)
+
+    def reset(self, on_init: bool = False) -> None:
         self.attempt = 0
         self.cycle = 0
         self.score = 0
-        if not first:
-            for cell in self.values():
+        if not on_init:
+            for cell in self.cells():
                 if cell:
                     cell.unlock()
                     self.set_cell(cell, 0)
@@ -97,8 +97,8 @@ class Grid(SquareGameGrid):
 
         self.set_cell(self[key], number)
 
-    def seed(self, amount: int = starting_amount) -> None:
-        """Assigns a number randomly chosen from `Grid.starting_values` to a
+    def seed(self, amount: int = STARTING_AMOUNT) -> None:
+        """Assigns a number randomly chosen from `Grid.SEEDING_VALUES` to a
         few (`amount`) randomly selected empty Cells.
         """
 
@@ -109,7 +109,7 @@ class Grid(SquareGameGrid):
         changed: Set[Cell] = set()
         for cell in random.sample(self.empty_cells, amount):
             assert not cell  # must be 0
-            self.set_cell(cell, random.choice(self.starting_values))
+            self.set_cell(cell, random.choice(self.SEEDING_VALUES))
             changed.add(cell)
         logger.debug(
             "Seeded those cells: %s.", "  ".join(sorted(map(repr, changed))),
@@ -216,7 +216,7 @@ class Grid(SquareGameGrid):
             self.cycle += 1
             logger.debug("Cycle increased to %d.", self.cycle)
             self.seed(1)
-            for cell in self.values():
+            for cell in self.cells():
                 if cell:
                     cell.unlock()
         return something_moved
