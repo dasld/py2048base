@@ -26,7 +26,7 @@ import appdirs  # https://pypi.org/project/appdirs
 from py2048 import APPNAME
 
 
-__all__ = ["logger", "DATA_DIR"]
+__all__ = ["logger", "DATA_DIR", "setup_logger"]
 
 
 # setup log folder and log file path
@@ -36,11 +36,11 @@ FILE_PATH = Path(DATA_DIR.joinpath(APPNAME + ".log"))
 
 
 # setup handlers
-handlers = (
+HANDLERS = (
     logging.FileHandler(filename=FILE_PATH, mode="w+"),
     logging.StreamHandler(stream=sys.stdout),
 )
-handlers[-1].setLevel(logging.ERROR)  # overrides the logger's level
+HANDLERS[-1].setLevel(logging.ERROR)  # overrides the logger's level
 
 
 # set up a formatter (to be used for all handlers)
@@ -57,10 +57,15 @@ FORMATTER = logging.Formatter(
 )
 
 
+def setup_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.info("Created %r", logger)
+    for h in HANDLERS:
+        h.setFormatter(FORMATTER)
+        logger.addHandler(h)
+        logger.info("Loaded handler: %r", h)
+    return logger
+
+
 # set up the main logger and equip it
-logger = logging.getLogger(APPNAME)
-logger.info("Created %r", logger)
-for h in handlers:
-    h.setFormatter(FORMATTER)
-    logger.addHandler(h)
-    logger.info("Loaded handler: %r", h)
+logger = setup_logger(APPNAME)
