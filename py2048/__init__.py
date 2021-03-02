@@ -44,7 +44,7 @@ from more_itertools import unzip
 
 
 APPNAME = __name__
-__version__ = (0, 7)
+__version__ = (0, 8)
 VERSION = ".".join(map(str, __version__))
 TESTING = False
 
