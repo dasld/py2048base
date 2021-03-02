@@ -59,11 +59,11 @@ FORMATTER = logging.Formatter(
 
 def setup_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.info("Created %r", logger)
     for h in HANDLERS:
         h.setFormatter(FORMATTER)
         logger.addHandler(h)
         logger.info("Loaded handler: %r", h)
+    logger.info("Created %r", logger)
     return logger
 
 
