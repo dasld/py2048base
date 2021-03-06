@@ -40,17 +40,12 @@ from collections.abc import Sequence as AbsSequence
 from enum import auto, Enum, unique
 from itertools import count, repeat
 
+import appdirs  # https://pypi.org/project/appdirs
 from more_itertools import unzip
 
 
-APPNAME = __name__
-__version__ = (0, 9)
-VERSION = ".".join(map(str, __version__))
-TESTING = False
-
-
 ## CONSTANTS
-# Generic constants
+# generic constants
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
 ModuleType = type(sys)  # just for annotation purposes
 Vector = Sequence[int]
@@ -66,6 +61,12 @@ else:
 EMPTY_TUPLE = tuple()  # dummy used in `min` and `max` calls
 INFTY = float("inf")
 NULL_SLICE = slice(None)
+# specific constants
+APPNAME = __name__
+__version__ = (0, 9)
+VERSION = ".".join(map(str, __version__))
+TESTING = False
+DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
 
 __all__ = [
