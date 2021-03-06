@@ -30,7 +30,7 @@ __all__ = ["logger", "setup_logger"]
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-log_file = DATA_DIR.resolve() + ".log"
+log_file = str(DATA_DIR.resolve() / ".log")
 
 # setup handlers
 HANDLERS = (
