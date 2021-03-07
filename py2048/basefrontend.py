@@ -46,7 +46,7 @@ class Base2048Frontend(ABC):
     @classmethod
     def is2048like(cls, n: int) -> bool:
         cache = cls.valid_numbers
-        while cache[-1] <= sys.maxsize and n > cache[-1]:
+        while cache[-1] < sys.maxsize and n > cache[-1]:
             cache.append(cache[-1] * 2)
         return n in cache
 
@@ -67,10 +67,11 @@ class Base2048Frontend(ABC):
         # `goal = goal or 2048` would allow "goal = 0" to pass silently
         if goal is None:
             goal = 2048
-        elif goal >= sys.maxsize:
-            raise OverflowError(f"the value {goal} is too big of a goal")
         elif not self.is2048like(goal):
-            raise ValueError("goal must be a positive power of 2")
+            raise ValueError(
+                "goal must be a positive power of 2 "
+                f"smaller than {sys.maxsize}"
+            )
         # checks passed
         self.grid = grid
         self.goal = goal
@@ -112,30 +113,30 @@ class Base2048Frontend(ABC):
         """The main loop repeatedly calls self.choice_function. If that raises
         `KeyboardInterrupt`, it returns immediately, without even calling
         `self.after_play()`. If that raises `EOFError`, it breaks the loop and
-        calls the remaining hooks.
-        Repeat until a) the grid is jammed; or b) the player exited; or c) the
-        goal has been reached for the first time.
+        calls `self.after_play()`.
+        This loops until either a) the grid is jammed; or b) the player exited;
+        or c) the goal has been reached for the first time.
         """
 
+        player_quit = False
         grid = self.grid
-        player_quit = panic = False
         if grid.is_empty:  # can't play with an empty board
             grid.seed()
         assert not grid.is_empty
-        jammed = grid.jammed
-        assert not jammed
         self.on_play()
         # the actual loop
+        jammed = grid.jammed
+        assert not jammed
         while not jammed:
             self.on_attempt()
             try:
                 choice = self.choice_function()
             except KeyboardInterrupt:
-                # Ctrl-C
-                panic = True
-                break
+                # quickly exit due to Ctrl-C
+                print()  # makes terminal looks nicer
+                return
             except EOFError:
-                # Ctrl-D or quit-command
+                # Ctrl-D/Z or some quit-command
                 player_quit = True
                 break
             assert choice in self.DIRECTIONS
@@ -151,21 +152,22 @@ class Base2048Frontend(ABC):
                 self.victory = True
                 break
         # after loop stuff
-        if panic:
-            # exit quickly due to KeyboardInterrupt (Ctrl-C)
-            print()  # makes terminal looks nicer
-            return
-            # sys.exit(1)
-        # exit normally
         self.after_play()
         # the order of the following if-clauses matters!
         if player_quit:
-            self.player_quit()
+            self.on_player_quit()
             return
-        if self.victory:  # happens once at most
-            self.player_victory()
-            return
-        self.player_loss()
+        if self.victory:
+            if jammed:
+                # the game has jammed, but the player had already won, so it's
+                # an "overvictory"
+                self.on_player_overvictory()
+            else:
+                # player's winning for the first time
+                self.on_player_victory()
+        else:
+            assert jammed
+            self.on_player_loss()
 
     # the following methods MUST be overriden
     def choose_direction(self) -> Directions:
@@ -173,17 +175,22 @@ class Base2048Frontend(ABC):
             "'choose_direction' must be overriden by subclass"
         )
 
-    def player_quit(self) -> Any:
+    def on_player_quit(self) -> Any:
         raise NotImplementedError(
-            "'player_quit' must be overriden by subclass"
+            "'on_player_quit' must be overriden by subclass"
         )
 
-    def player_victory(self) -> Any:
+    def on_player_victory(self) -> Any:
         raise NotImplementedError(
-            "'player_victory' must be overriden by subclass"
+            "'on_player_victory' must be overriden by subclass"
         )
 
-    def player_loss(self) -> Any:
+    def on_player_overvictory(self) -> Any:
         raise NotImplementedError(
-            "'player_loss' must be overriden by subclass"
+            "'on_player_overvictory' must be overriden by subclass"
+        )
+
+    def on_player_loss(self) -> Any:
+        raise NotImplementedError(
+            "'on_player_loss' must be overriden by subclass"
         )
