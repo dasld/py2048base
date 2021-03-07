@@ -29,11 +29,11 @@ __all__ = ["logger", "setup_logger"]
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-log_file = str(DATA_DIR.resolve() / APPNAME / ".log")
+fpath = str(DATA_DIR.resolve() / f"{APPNAME}.log")
 
 # setup the default handlers
 HANDLERS = (
-    logging.FileHandler(filename=log_file, mode="w"),
+    logging.FileHandler(filename=fpath, mode="w"),
     logging.StreamHandler(stream=sys.stderr),
 )
 HANDLERS[-1].setLevel(logging.ERROR)  # will override the logger's level
