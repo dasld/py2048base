@@ -153,11 +153,9 @@ class Base2048Frontend(ABC):
                 break
         # after loop stuff
         self.after_play()
-        # the order of the following if-clauses matters!
         if player_quit:
             self.on_player_quit()
-            return
-        if self.victory:
+        elif self.victory:
             if jammed:
                 # the game has jammed, but the player had already won, so it's
                 # an "overvictory"

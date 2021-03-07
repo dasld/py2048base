@@ -18,7 +18,6 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-
 from pathlib import Path
 import logging
 
@@ -30,20 +29,21 @@ __all__ = ["logger", "setup_logger"]
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-log_file = str(DATA_DIR.resolve() / ".log")
+log_file = str(DATA_DIR.resolve() / APPNAME / ".log")
 
-# setup handlers
+# setup the default handlers
 HANDLERS = (
     logging.FileHandler(filename=log_file, mode="w"),
-    logging.StreamHandler(stream=sys.stdout),
+    logging.StreamHandler(stream=sys.stderr),
 )
-HANDLERS[-1].setLevel(logging.ERROR)  # overrides the logger's level
+HANDLERS[-1].setLevel(logging.ERROR)  # will override the logger's level
 
 # set up a formatter (to be used for all handlers)
 FORMATTER = logging.Formatter(
     fmt="\t".join(
         [
-            "%(asctime)s,%(msecs)d",  # human-readable timestamp
+            # "%(asctime)s,%(msecs)d",  # human-readable timestamp
+            "%(asctime)s",  # human-readable timestamp
             # "%(name)s @ %(module)s",  # logger name @ module
             "%(funcName)s @ %(module)s",  # calling function @ module
             "(%(levelname)s) %(message)s",  # (level name) message
@@ -58,8 +58,8 @@ def setup_logger(name: str) -> logging.Logger:
     for h in HANDLERS:
         h.setFormatter(FORMATTER)
         logger.addHandler(h)
-        logger.info("Loaded handler: %r", h)
-    logger.info("Created %r", logger)
+        logger.info("Loaded handler: '%s'.", h)
+    logger.info("Created '%s'.", logger)
     return logger
 
 
