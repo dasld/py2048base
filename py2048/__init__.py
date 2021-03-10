@@ -63,7 +63,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 15)
+__version__ = (0, 16)
 VERSION = ".".join(map(str, __version__))
 TESTING = False
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
@@ -91,8 +91,12 @@ __all__ = [
 
 
 ## GENERAL-PURPOSE FUNCTIONS
-def typename(obj: Any) -> str:
-    return type(obj).__name__
+def typename(thing: Any) -> str:
+    return type(thing).__name__
+
+
+def hexid(thing: Any) -> str:
+    return hex(id(thing))
 
 
 def iscontainer(thing: Any) -> bool:
@@ -100,7 +104,7 @@ def iscontainer(thing: Any) -> bool:
     """
 
     cls = type(thing)
-    return issubclass(cls, AbcSequence) and cls is not str
+    return issubclass(cls, AbcSequence) and not issubclass(cls, str)
 
 
 def type_check(
