@@ -24,8 +24,8 @@ from typing import (
     Tuple,
 )
 import logging
-import random
 from itertools import chain
+import random
 
 from py2048 import (
     SquareGameGrid,

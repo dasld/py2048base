@@ -34,11 +34,12 @@ from typing import (
 )
 from abc import ABC
 import sys
+import enum
 from pathlib import Path
 from collections import namedtuple
 from collections.abc import Sequence as AbcSequence
-from enum import auto, Enum, unique
-from itertools import count, repeat
+from itertools import count
+import pickle
 
 import appdirs  # https://pypi.org/project/appdirs
 from more_itertools import unzip
@@ -52,7 +53,7 @@ Vector = Sequence[int]
 # https://github.com/python/typing/issues/684#issuecomment-548203158
 if TYPE_CHECKING:
 
-    class EllipsisType(Enum):
+    class EllipsisType(enum.Enum):
         Ellipsis = "..."
 
     Ellipsis = EllipsisType.Ellipsis
@@ -63,16 +64,19 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 16)
+__version__ = (0, 17)
 VERSION = ".".join(map(str, __version__))
-TESTING = False
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
+
+TESTING = False
 
 
 __all__ = [
     # global variables
     "INFTY",
     # generic functions
+    "typename",
+    "hexid",
     "iscontainer",
     "type_check",
     "check_int",
@@ -169,12 +173,12 @@ class ExpectationError(Base2048Error, TypeError):
         positive: bool = True,
     ) -> None:
         if iscontainer(expectations):
-            self.expectations = "/".join([e.__name__ for e in expectations])
+            self.expectations = "/".join(map(typename, expectations))
         else:
-            self.expectations = expectations.__name__
+            self.expectations = typename(expectations)
         self.positive = positive
         self.problem = repr(problem)
-        self.problem_type = type(problem).__name__
+        self.problem_type = typename(problem)
         self.message = "" if not args else "".join(map(repr, args)) + ". "
         super().__init__(*args)
 
@@ -215,8 +219,8 @@ class Point(namedtuple("Point", "x y")):
 Line = Tuple[Point]
 
 
-@unique
-class Directions(Enum):
+@enum.unique
+class Directions(enum.Enum):
     """Enumerates the four orthogonal directions in the WASD order. The value
     of each direction is it's lowercased name: `Directions.UP.value == "up"`,
     and so on.
@@ -226,10 +230,10 @@ class Directions(Enum):
         return name.lower()
 
     # WASD order
-    UP = auto()
-    LEFT = auto()
-    DOWN = auto()
-    RIGHT = auto()
+    UP = enum.auto()
+    LEFT = enum.auto()
+    DOWN = enum.auto()
+    RIGHT = enum.auto()
 
     @classmethod
     def pretty(cls) -> str:
@@ -259,7 +263,7 @@ class GridIndex:
     Type = Union[SingletonType, Tuple[SingletonType]]
 
     def __init__(self, *args: Sequence[SingletonType]) -> None:
-        cls = type(self).__name__
+        cls = typename(self)
         if not args:
             x = y = NULL_SLICE
         elif len(args) == 1:
@@ -307,7 +311,7 @@ class GridIndex:
         return hash((type(self), self.x, self.y))
 
     def __repr__(self) -> str:
-        return type(self).__name__ + self._str
+        return typename(self) + self._str
 
     def __str__(self) -> str:
         return self._str
@@ -346,13 +350,14 @@ class BaseGameGrid(ABC):
                     self.map[point] = cls()
 
     def keys(self) -> Iterator[Point]:
+        # sorted returns a list
         return iter(sorted(self.map.keys()))
 
     def values(self) -> Iterator[CELLCLASS]:
-        return iter((self.map[k] for k in self.keys()))
+        return (self.map[k] for k in self.keys())
 
     def items(self) -> Iterator[Tuple[Point, CELLCLASS]]:
-        return iter(((k, self.map[k]) for k in self.keys()))
+        return ((k, self.map[k]) for k in self.keys())
 
     # some synonyms
     __iter__ = keys
@@ -425,6 +430,19 @@ class BaseGameGrid(ABC):
             assert isinstance(value, self.CELLCLASS)
         assert len(self) == self.height * self.width
 
+    def pickle(self, path) -> None:
+        with open(path, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def unpickle(path, ignore_missing: bool = True) -> Optional["BaseGameGrid"]:
+        try:
+            with open(path, "rb") as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            if not ignore_missing:
+                raise
+
     @staticmethod
     def slice2range(s: slice) -> range:
         # slice objects have read-only data attributes start, stop and step
@@ -492,7 +510,7 @@ class BaseGameGrid(ABC):
         selected = self.select_keys(key)
         amount = len(selected)
         if not iscontainer(value):
-            value = repeat(value, amount)
+            value = [value] * amount
         elif len(value) != amount:
             raise ValueError(
                 "Wrong amount of values to unpack: "
@@ -503,8 +521,8 @@ class BaseGameGrid(ABC):
         self.check_integrity()
 
     def __repr__(self) -> str:
-        cls = type(self).__name__
-        cellclass = self.CELLCLASS.__name__
+        cls = typename(self)
+        cellclass = typename(self.CELLCLASS)
         w, h = self.width, self.height
         return f"{cls}('{cellclass}', {w} x {h})"
 
