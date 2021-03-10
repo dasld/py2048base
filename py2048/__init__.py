@@ -36,7 +36,7 @@ from abc import ABC
 import sys
 from pathlib import Path
 from collections import namedtuple
-from collections.abc import Sequence as AbsSequence
+from collections.abc import Sequence as AbcSequence
 from enum import auto, Enum, unique
 from itertools import count, repeat
 
@@ -63,7 +63,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 14)
+__version__ = (0, 15)
 VERSION = ".".join(map(str, __version__))
 TESTING = False
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
@@ -91,12 +91,16 @@ __all__ = [
 
 
 ## GENERAL-PURPOSE FUNCTIONS
+def typename(obj: Any) -> str:
+    return type(obj).__name__
+
+
 def iscontainer(thing: Any) -> bool:
     """Determines whether the argument is iterable, but not a `str`.
     """
 
     cls = type(thing)
-    return issubclass(cls, AbsSequence) and cls is not str
+    return issubclass(cls, AbcSequence) and cls is not str
 
 
 def type_check(

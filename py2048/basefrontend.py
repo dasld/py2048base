@@ -120,8 +120,7 @@ class Base2048Frontend(ABC):
 
         player_quit = False
         grid = self.grid
-        if grid.is_empty:  # can't play with an empty board
-            grid.seed()
+        # can't play with an empty board
         assert not grid.is_empty
         self.on_play()
         # the actual loop
