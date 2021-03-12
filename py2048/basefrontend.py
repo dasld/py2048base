@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 import random
 
-from py2048 import Directions, type_check
+from py2048 import Base2048Error, Directions, type_check
 from py2048.grid import Grid
 
 
@@ -120,12 +120,18 @@ class Base2048Frontend(ABC):
 
         player_quit = False
         grid = self.grid
-        # can't play with an empty board
-        assert not grid.is_empty
         self.on_play()
+        # can't play with an empty board
+        if grid.is_empty:
+            raise Base2048Error(
+                f"Asked to play 2048 with an empty grid:\n{grid}"
+            )
         # the actual loop
         jammed = grid.jammed
-        assert not jammed
+        if jammed:
+            raise Base2048Error(
+                f"Asked to play 2048 with a jammed grid:\n{grid}"
+            )
         while not jammed:
             self.on_attempt()
             try:

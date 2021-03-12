@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 17)
+__version__ = (0, 18)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -247,13 +247,13 @@ class GridIndex:
     statement.
     For example, grid[..., 3] should return the second row, grid[2, 3] should
     return the cell at the first column and the second row, and so on.
-    grid[..., ...] copies the grid, just like L[:] copies a `list'.
+    grid[..., ...] copies the grid, just like L[:] copies a `list`.
 
     The class expects either a single argument, or a tuple with exactly two
     arguments.
-    Each argument must be either an `Ellipsis' literal, an `int', or a `slice'.
+    Each argument must be either an `Ellipsis` literal, an `int`, or a `slice`.
     Integers cannot be negative.
-    `Ellipsis' is converted into the "null slice", which is `slice(None)'. It
+    `Ellipsis` is converted into the "null slice", which is `slice(None)`. It
     represents that all rows, or all columns, are being selected.
     If only one object is passed, it is assigned to the x-axis, and the y-index
     defaults to the null slice.
@@ -389,22 +389,20 @@ class BaseGameGrid(ABC):
                 yielded.add(y)
 
     @property
-    def height(self) -> int:
-        return len(tuple(self.y_axis))
-
-    @property
     def width(self) -> int:
         return len(tuple(self.x_axis))
 
     @property
-    def rows(self) -> Iterator[Line]:
-        for y in self.y_axis:
-            yield self[..., y]
+    def height(self) -> int:
+        return len(tuple(self.y_axis))
 
     @property
     def columns(self) -> Iterator[Line]:
-        for x in self.x_axis:
-            yield self[x]
+        return (self[x] for x in self.x_axis)
+
+    @property
+    def rows(self) -> Iterator[Line]:
+        return (self[..., y] for y in self.y_axis)
 
     def check_integrity(self) -> None:
         # check columns
@@ -435,7 +433,9 @@ class BaseGameGrid(ABC):
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
-    def unpickle(path, ignore_missing: bool = True) -> Optional["BaseGameGrid"]:
+    def unpickle(
+        path, ignore_missing: bool = True
+    ) -> Optional["BaseGameGrid"]:
         try:
             with open(path, "rb") as f:
                 return pickle.load(f)
@@ -483,6 +483,8 @@ class BaseGameGrid(ABC):
     def __getitem__(self, key: GridIndex.Type) -> Union[Point, Line]:
         if isinstance(key, Point):
             # no need for further complications when getting a single Point
+            # we don't use `dict.get` here because another function might want
+            # to catch the `KeyError`
             return self.map[key]
         selected = tuple(
             (self.map[selected] for selected in self.select_keys(key))
@@ -527,7 +529,7 @@ class BaseGameGrid(ABC):
         return f"{cls}('{cellclass}', {w} x {h})"
 
     def __str__(self) -> str:
-        return "\n".join(map(repr, tuple(self.rows)))
+        return "\n".join(map(repr, self.rows))
 
 
 class SquareGameGrid(BaseGameGrid):

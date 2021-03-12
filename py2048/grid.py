@@ -69,7 +69,7 @@ class Grid(SquareGameGrid):
 
     @property
     def largest_number(self) -> int:
-        return max([cell.number for cell in self.cells()], default=0)
+        return max((cell.number for cell in self.cells()), default=0)
 
     @property
     def is_empty(self) -> bool:
