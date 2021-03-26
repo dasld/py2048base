@@ -34,7 +34,7 @@ from typing import (
 )
 from abc import ABC
 import sys
-import enum
+from enum import Enum, unique
 from pathlib import Path
 from collections import namedtuple
 from collections.abc import Sequence as AbcSequence
@@ -53,7 +53,7 @@ Vector = Sequence[int]
 # https://github.com/python/typing/issues/684#issuecomment-548203158
 if TYPE_CHECKING:
 
-    class EllipsisType(enum.Enum):
+    class EllipsisType(Enum):
         Ellipsis = "..."
 
     Ellipsis = EllipsisType.Ellipsis
@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 18)
+__version__ = (0, 19)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -73,6 +73,8 @@ TESTING = False
 
 __all__ = [
     # global variables
+    "APPNAME",
+    "DATA_DIR",
     "INFTY",
     # generic functions
     "typename",
@@ -219,21 +221,18 @@ class Point(namedtuple("Point", "x y")):
 Line = Tuple[Point]
 
 
-@enum.unique
-class Directions(enum.Enum):
-    """Enumerates the four orthogonal directions in the WASD order. The value
-    of each direction is it's lowercased name: `Directions.UP.value == "up"`,
+@unique
+class Directions(Enum):
+    """The four orthogonal directions in the WASD order. The value of each
+    Directions object is it's lowercased name: `Directions.UP.value == "up"`,
     and so on.
     """
 
-    def _generate_next_value_(name, start, count, last_values) -> str:
-        return name.lower()
-
     # WASD order
-    UP = enum.auto()
-    LEFT = enum.auto()
-    DOWN = enum.auto()
-    RIGHT = enum.auto()
+    UP = "up"
+    LEFT = "left"
+    DOWN = "down"
+    RIGHT = "right"
 
     @classmethod
     def pretty(cls) -> str:
