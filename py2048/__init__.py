@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 19)
+__version__ = (0, 20)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -88,7 +88,9 @@ __all__ = [
     "ExpectationError",
     # generic classes
     "Point",
+    "Line",
     "Directions",
+    "paired_with_Directions",  # a function
     "GridIndex",
     # game grid classes
     "BaseGameGrid",
@@ -237,6 +239,13 @@ class Directions(Enum):
     @classmethod
     def pretty(cls) -> str:
         return ", ".join(map(str, cls))
+
+
+def paired_with_Directions(keys):
+    got, target = len(keys), len(Directions)
+    if got != target:
+        raise ValueError(f"Must pair with exactly {target} keys; {got} found")
+    return dict(zip(keys, Directions))
 
 
 class GridIndex:
