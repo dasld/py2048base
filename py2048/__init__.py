@@ -34,7 +34,7 @@ from typing import (
 )
 from abc import ABC
 import sys
-from enum import Enum, unique
+import enum
 from pathlib import Path
 from collections import namedtuple
 from collections.abc import Sequence as AbcSequence
@@ -53,7 +53,7 @@ Vector = Sequence[int]
 # https://github.com/python/typing/issues/684#issuecomment-548203158
 if TYPE_CHECKING:
 
-    class EllipsisType(Enum):
+    class EllipsisType(enum.Enum):
         Ellipsis = "..."
 
     Ellipsis = EllipsisType.Ellipsis
@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 20)
+__version__ = (0, 21)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -90,7 +90,6 @@ __all__ = [
     "Point",
     "Line",
     "Directions",
-    "paired_with_Directions",  # a function
     "GridIndex",
     # game grid classes
     "BaseGameGrid",
@@ -223,8 +222,8 @@ class Point(namedtuple("Point", "x y")):
 Line = Tuple[Point]
 
 
-@unique
-class Directions(Enum):
+@enum.unique
+class Directions(enum.Enum):
     """The four orthogonal directions in the WASD order. The value of each
     Directions object is it's lowercased name: `Directions.UP.value == "up"`,
     and so on.
@@ -240,12 +239,14 @@ class Directions(Enum):
     def pretty(cls) -> str:
         return ", ".join(map(str, cls))
 
-
-def paired_with_Directions(keys):
-    got, target = len(keys), len(Directions)
-    if got != target:
-        raise ValueError(f"Must pair with exactly {target} keys; {got} found")
-    return dict(zip(keys, Directions))
+    @classmethod
+    def paired_with(cls, keys):
+        got, target = len(keys), len(cls)
+        if got != target:
+            raise ValueError(
+                f"Must pair with exactly {target} keys; {got} found"
+            )
+        return dict(zip(keys, cls))
 
 
 class GridIndex:
@@ -272,20 +273,22 @@ class GridIndex:
 
     def __init__(self, *args: Sequence[SingletonType]) -> None:
         cls = typename(self)
-        if not args:
+        none_error = f"Cannot make a {cls} from None"
+        length = len(args)
+        if not length:
             x = y = NULL_SLICE
-        elif len(args) == 1:
+        elif length == 1:
             the_arg = args[0]
             if the_arg is None:
-                raise TypeError(f"Cannot make a {cls} from None")
+                raise TypeError(none_error)
             # suppose it's a pair and try to unpack it
             try:
                 x, y = the_arg
             except (ValueError, TypeError):
                 x, y = the_arg, NULL_SLICE
-        elif len(args) == 2:
+        elif length == 2:
             if None in args:
-                raise TypeError(f"Cannot make a {cls} from None")
+                raise TypeError(none_error)
             x, y = args
         else:
             raise ValueError(
@@ -348,6 +351,8 @@ class BaseGameGrid(ABC):
             )
         check_int(width)
         check_int(height)
+        if not width or not height:
+            raise ValueError("'width' and 'height' must be positive")
         self.map: Dict[Point, cls] = {}
         for x in range(width):
             for y in range(height):
