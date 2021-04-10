@@ -2,6 +2,9 @@
 py2048
 ######
 
+.. image:: https://img.shields.io/github/license/dasld/py2048base?color=blue&style=flat-square   :alt: GitHub
+.. image:: https://img.shields.io/pypi/v/py2048base?color=green&style=flat-square   :alt: PyPI
+
 **py2048** is a clone of the famous game
 `2048 <https://play2048.co/>`_,
 by
