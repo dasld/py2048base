@@ -153,7 +153,7 @@ class Base2048Frontend(ABC):
             else:
                 self.after_nochange(choice)
             self.after_attempt(choice)
-            if not self.victory and grid.largest_number >= self.goal:
+            if not self.victory and grid.largest >= self.goal:
                 self.victory = True
                 break
         # after loop stuff
