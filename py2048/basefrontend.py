@@ -127,12 +127,12 @@ class Base2048Frontend(ABC):
                 f"Asked to play 2048 with an empty grid:\n{grid}"
             )
         # the actual loop
-        jammed = grid.jammed
-        if jammed:
+        is_jammed = grid.is_jammed
+        if is_jammed:
             raise Base2048Error(
                 f"Asked to play 2048 with a jammed grid:\n{grid}"
             )
-        while not jammed:
+        while not is_jammed:
             self.on_attempt()
             try:
                 choice = self.choice_function()
@@ -149,7 +149,7 @@ class Base2048Frontend(ABC):
             dragged = grid.drag(choice)
             if dragged:
                 self.after_change(choice)
-                jammed = grid.jammed
+                is_jammed = grid.is_jammed
             else:
                 self.after_nochange(choice)
             self.after_attempt(choice)
@@ -161,7 +161,7 @@ class Base2048Frontend(ABC):
         if player_quit:
             self.on_player_quit()
         elif self.victory:
-            if jammed:
+            if is_jammed:
                 # the game has jammed, but the player had already won, so it's
                 # an "overvictory"
                 self.on_player_overvictory()
@@ -169,7 +169,7 @@ class Base2048Frontend(ABC):
                 # player's winning for the first time
                 self.on_player_victory()
         else:
-            assert jammed
+            assert is_jammed
             self.on_player_loss()
 
     # the following methods MUST be overriden

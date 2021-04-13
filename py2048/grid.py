@@ -68,7 +68,7 @@ class Grid(SquareGameGrid):
         self.check_integrity()
 
     @property
-    def largest_number(self) -> int:
+    def largest(self) -> int:
         return max((cell.number for cell in self.cells()), default=0)
 
     @property
@@ -174,19 +174,19 @@ class Grid(SquareGameGrid):
         if pivot == cell:
             return False
         new_number = cell.number + pivot.number
+        # update the score only when the Cell moved to a positive pivot
         if pivot:
             pivot.lock()  # prevent further movement this cycle
-            # update the score only when the Cell moved to a positive pivot
             self.score += new_number
         self.set_cell(cell, 0)
         self.set_cell(pivot, new_number)
         return True
 
     def drag(self, to: Directions) -> bool:
-        """Increments its attempts count, then tries to move every cell in the
-        given direction, starting with the vectors closest to this direction.
-        If anything changed, it increments its cycle by 1 and seeds itself by
-        1.
+        """If given a valid direction, increments its attempts count, then
+        tries to move every cell in the given direction, starting with the
+        vectors closest to it. If that changed anything, it increments its
+        cycle by 1 and seeds itself by 1.
         """
 
         if to == Directions.LEFT:
@@ -203,14 +203,13 @@ class Grid(SquareGameGrid):
         else:
             # EVEN WORSE
             raise ExpectationError(to, Directions)
-        something_moved = False
         self.attempt += 1
         logger.debug("Attempt increased to %d.", self.attempt)
+        something_moved = False
         for cell in chain.from_iterable(vectors):
             this_moved = self.move_cell(cell, to)
             # assert isinstance(moved, bool)
-            if not something_moved and this_moved:
-                something_moved = True
+            something_moved |= this_moved
         if something_moved:
             logger.debug("Dragging %r changed me.", to)
             self.cycle += 1
@@ -222,7 +221,7 @@ class Grid(SquareGameGrid):
         return something_moved
 
     @property
-    def jammed(self) -> bool:
+    def is_jammed(self) -> bool:
         """Returns False if there's any legal movement left for the player,
         True if there's none.
         Rationale: if there's at least one zero Cell, the Grid is not jammed,
@@ -245,5 +244,5 @@ class Grid(SquareGameGrid):
                         "Not jammed: %r is next to %r.", cell, neighbor,
                     )
                     return False
-        logger.debug("JAMMED!")
+        logger.debug("Jammed grid detected!")
         return True

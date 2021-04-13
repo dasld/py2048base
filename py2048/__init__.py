@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 21)
+__version__ = (0, 22)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -537,7 +537,7 @@ class BaseGameGrid(ABC):
 
     def __repr__(self) -> str:
         cls = typename(self)
-        cellclass = typename(self.CELLCLASS)
+        cellclass = self.CELLCLASS.__name__
         w, h = self.width, self.height
         return f"{cls}('{cellclass}', {w} x {h})"
 
