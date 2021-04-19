@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 25)
+__version__ = (0, 26)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -351,7 +351,7 @@ class BaseGameGrid(ABC):
             )
         check_int(width)
         check_int(height)
-        if min(width, height, default=0) < 2:
+        if min(width, height) < 2:
             raise ValueError(
                 "'width' and 'height' must both greater than or equal to 2"
             )
