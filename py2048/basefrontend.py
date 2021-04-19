@@ -35,20 +35,9 @@ class Base2048Frontend(ABC):
     overriden.
     """
 
-    # 2^11 == 2048
-    # sys.maxsize == (2^63) - 1 on 64bits machines
-    valid_numbers: List[int] = [2 ** power for power in range(1, 12)]
-    DIRECTIONS = tuple(Directions)
     SLEEP_S = 1  # how many seconds to sleep when in auto mode
     # converting seconds to mseconds
     SLEEP_MS = int(SLEEP_S * 1_000)
-
-    @classmethod
-    def is2048like(cls, n: int) -> bool:
-        cache = cls.valid_numbers
-        while cache[-1] < sys.maxsize and n > cache[-1]:
-            cache.append(cache[-1] * 2)
-        return n in cache
 
     def restart(self) -> None:
         self.victory = False
@@ -67,7 +56,7 @@ class Base2048Frontend(ABC):
         # `goal = goal or 2048` would allow "goal = 0" to pass silently
         if goal is None:
             goal = 2048
-        elif not self.is2048like(goal):
+        elif not grid.is2048like(goal):
             raise ValueError(
                 "goal must be a positive power of 2 "
                 f"smaller than {sys.maxsize}"
@@ -105,7 +94,7 @@ class Base2048Frontend(ABC):
         pass
 
     def guess_direction(self) -> Directions:
-        return random.choice(self.DIRECTIONS)
+        return random.choice(self.grid.DIRECTIONS)
 
     # MAIN LOOP: shouldn't be overriden
     @final
@@ -132,7 +121,7 @@ class Base2048Frontend(ABC):
             raise Base2048Error(
                 f"Asked to play 2048 with a jammed grid:\n{grid}"
             )
-        while not is_jammed:
+        while not (is_jammed or self.victory):
             self.on_attempt()
             try:
                 choice = self.choice_function()
@@ -144,7 +133,7 @@ class Base2048Frontend(ABC):
                 # Ctrl-D/Z or some quit-command
                 player_quit = True
                 break
-            assert choice in self.DIRECTIONS
+            assert choice in Directions
             self.after_choice(choice)
             dragged = grid.drag(choice)
             if dragged:
@@ -155,7 +144,6 @@ class Base2048Frontend(ABC):
             self.after_attempt(choice)
             if not self.victory and grid.largest >= self.goal:
                 self.victory = True
-                break
         # after loop stuff
         self.after_play()
         if player_quit:

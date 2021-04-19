@@ -62,36 +62,33 @@ class Cell:
 
         # if two objects test as equal, then they MUST have the same hash value
         # objects that have a hash MUST produce the same hash over time
-        return hash((self.__class__, self.x, self.y))
+        return hash((type(self), self.x, self.y))
 
     def __gt__(self, other) -> bool:
         """Defined just to allow Cells to be ordered and sorted.
         """
 
-        if isinstance(other, self.__class__):
+        if isinstance(other, type(self)):
             return self.point > other.point
         return NotImplemented
 
-    def _locked_setter(self, onoff: bool) -> None:
+    def _set_lock(self, onoff: bool) -> None:
         type_check(onoff, bool)
-        if onoff and not self:
-            # A 0-Cell shouldn't be moving in the first place, so it can't be
-            # locked!
-            raise ValueError("It doesn't make sense to lock an empty Cell")
         self._lock = onoff
 
-    locked = property(
+    is_locked = property(
         fget=lambda self: self._lock,
-        fset=_locked_setter,
+        fset=_set_lock,
         doc=(
-            "The 'lock' is a `bool` that tells whether the `Cell` has already "
+            "`_lock` is a `bool` that tells whether the `Cell` has already "
             "moved this cycle. This prevents a 2 merging into a 2 and the "
-            "resulting 4 merging into another 4 all in a single movement."
+            "resulting 4 merging into another 4 all in a single movement, "
+            "for example."
         ),
     )
 
-    lock = partialmethod(_locked_setter, True)
-    unlock = partialmethod(_locked_setter, False)
+    lock = partialmethod(_set_lock, True)
+    unlock = partialmethod(_set_lock, False)
 
     def __repr__(self) -> str:
         return f"Cell<{self.x},{self.y}>({self.number})"

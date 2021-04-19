@@ -18,11 +18,12 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 from typing import (
-    # Any,
+    Mapping,
     Optional,
     Set,
     Tuple,
 )
+import sys
 import logging
 from itertools import chain
 import random
@@ -40,21 +41,72 @@ from py2048.cell import Cell
 logger = logging.getLogger(__name__)
 
 
+Snapshot = Mapping[Point, int]
+
+
 class Grid(SquareGameGrid):
     CELLCLASS: type = Cell
     # how many cells start non-zero
     STARTING_AMOUNT = 2
     # what values can be seeded in each cell
     SEEDING_VALUES = (2, 4)
+    # 2^11 == 2048
+    NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
+    DIRECTIONS = tuple(Directions)
 
     cells = SquareGameGrid.values
+
+    @classmethod
+    def is2048like(cls, n: int) -> bool:
+        # sys.maxsize == (2^63) - 1 on 64bits machines
+        while cls.NUMBERS[-1] < sys.maxsize and n > cls.NUMBERS[-1]:
+            cls.NUMBERS.append(cls.NUMBERS[-1] * 2)
+        return n in cls.NUMBERS
 
     def __init__(self, side: int = 4) -> None:
         logger.info("Creating a %dx%d Grid instance", side, side)
         assert 0 < self.STARTING_AMOUNT < side ** 2
         super().__init__(side)
         self.empty_cells: Set[Cell] = set(self.cells())
+        self.history: List[Snapshot] = []
         self.reset(on_init=True)
+
+    def snapshot(self) -> Snapshot:
+        return {point: cell.number for point, cell in self.items()}
+
+    def store_snapshot(self):
+        self.history.append(self.snapshot())
+
+    def update_with_snapshot(self, snapshot: Snapshot) -> None:
+        for point, number in snapshot.items():
+            cell = self[point]
+            cell.unlock()
+            self.set_cell(cell, number)
+        self.check_integrity()
+
+    @classmethod
+    def new_from_snapshot(cls, snapshot: Snapshot) -> "Grid":
+        sqrt = len(snapshot) ** 0.5  # a float
+        side = int(sqrt)
+        if side != sqrt:
+            raise ValueError
+        new = cls(side)
+        new.update_with_snapshot(snapshot)
+        return new
+
+    def undo(self, ignore_empty: bool = True):
+        try:
+            # the last snapshot is the current state, so we forget it
+            del self.history[-1]
+            # now the last snapshot is the previous state, so we retrieve and
+            # forget it
+            snap = self.history.pop()
+        except IndexError:
+            if not ignore_empty:
+                raise
+        else:
+            self.update_with_snapshot(snap)
+            self.store_snapshot()
 
     def reset(self, on_init: bool = False) -> None:
         self.attempt = 0
@@ -62,9 +114,9 @@ class Grid(SquareGameGrid):
         self.score = 0
         if not on_init:
             for cell in self.cells():
-                if cell:
-                    cell.unlock()
-                    self.set_cell(cell, 0)
+                cell.unlock()
+                self.set_cell(cell, 0)
+            self.history.clear()
         self.check_integrity()
 
     @property
@@ -114,7 +166,8 @@ class Grid(SquareGameGrid):
         logger.debug(
             "Seeded those cells: %s.", "  ".join(sorted(map(repr, changed))),
         )
-        # return tuple(changed)
+        assert changed
+        self.store_snapshot()
 
     def neighbor(self, cell: Cell, to: Directions) -> Optional[Cell]:
         """Returns the next (possibly empty) Cell in the given direction, or
@@ -131,8 +184,12 @@ class Grid(SquareGameGrid):
             y += 1
         elif to == Directions.UP:
             y -= 1
-        else:
+        elif isinstance(to, Directions):
+            # very bad
             raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
+        else:
+            # EVEN WORSE
+            raise ExpectationError(to, Directions)
         try:
             next_point = Point(x, y)  # NegativeIntegerError
             next_cell = self[next_point]  # KeyError
@@ -155,7 +212,7 @@ class Grid(SquareGameGrid):
             if not current:  # empty Cell; keep looking
                 last = current
                 continue
-            if current.number == cell.number and not current.locked:
+            if current.number == cell.number and not current.is_locked:
                 return current
             # in this case, the new Cell's number matches, but it is locked
             # because it has already moved this cycle, so we ignore it
@@ -197,12 +254,7 @@ class Grid(SquareGameGrid):
             vectors = tuple(self.rows)
         elif to == Directions.DOWN:
             vectors = tuple(self.rows)[::-1]
-        elif isinstance(to, Directions):
-            # very bad
-            raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
-        else:
-            # EVEN WORSE
-            raise ExpectationError(to, Directions)
+        #
         self.attempt += 1
         logger.debug("Attempt increased to %d.", self.attempt)
         something_moved = False
@@ -214,10 +266,9 @@ class Grid(SquareGameGrid):
             logger.debug("Dragging %r changed me.", to)
             self.cycle += 1
             logger.debug("Cycle increased to %d.", self.cycle)
-            self.seed(1)
+            self.seed(1)  # will also store a snapshot
             for cell in self.cells():
-                if cell:
-                    cell.unlock()
+                cell.unlock()
         return something_moved
 
     @property
@@ -246,3 +297,16 @@ class Grid(SquareGameGrid):
                     return False
         logger.debug("Jammed grid detected!")
         return True
+
+    def _autofill(self) -> None:
+        numbers = self.NUMBERS[:-1]
+        for cell in self.grid.cells():
+            cell.unlock()
+            self.set_cell(cell, random.choice(numbers))
+
+    def autofill(self, no_jamming: bool = True) -> None:
+        self._autofill()
+        if no_jamming:
+            while self.is_jammed:
+                self._autofill()
+        self.store_snapshot()

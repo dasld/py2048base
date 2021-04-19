@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 23)
+__version__ = (0, 24)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -353,24 +353,24 @@ class BaseGameGrid(ABC):
         check_int(height)
         if not width or not height:
             raise ValueError("'width' and 'height' must be positive")
-        self.map: Dict[Point, cls] = {}
+        self.mapping: Dict[Point, cls] = {}
         for x in range(width):
             for y in range(height):
                 point = Point(x, y)
                 try:
-                    self.map[point] = cls(point)
+                    self.mapping[point] = cls(point)
                 except TypeError:
-                    self.map[point] = cls()
+                    self.mapping[point] = cls()
 
     def keys(self) -> Iterator[Point]:
         # sorted returns a list
-        return iter(sorted(self.map.keys()))
+        return iter(sorted(self.mapping.keys()))
 
     def values(self) -> Iterator[CELLCLASS]:
-        return (self.map[k] for k in self.keys())
+        return (self.mapping[k] for k in self.keys())
 
     def items(self) -> Iterator[Tuple[Point, CELLCLASS]]:
-        return ((k, self.map[k]) for k in self.keys())
+        return ((k, self.mapping[k]) for k in self.keys())
 
     # some synonyms
     __iter__ = keys
@@ -378,11 +378,11 @@ class BaseGameGrid(ABC):
 
     def __len__(self) -> int:
         # this also provides __bool__
-        return len(self.map)
+        return len(self.mapping)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, type(self)):
-            return self.map == other.map
+            return self.mapping == other.mapping
         return NotImplemented
 
     @property
@@ -498,9 +498,9 @@ class BaseGameGrid(ABC):
             # no need for further complications when getting a single Point
             # we don't use `dict.get` here because another function might want
             # to catch the `KeyError`
-            return self.map[key]
+            return self.mapping[key]
         selected = tuple(
-            (self.map[selected] for selected in self.select_keys(key))
+            (self.mapping[selected] for selected in self.select_keys(key))
         )
         if not selected:
             raise KeyError
@@ -513,7 +513,10 @@ class BaseGameGrid(ABC):
         """
 
         type_check(value, self.CELLCLASS)
-        self.map[key] = value
+        self.mapping[key] = value
+
+    def set_xy(self, x: int, y: int, value: Any) -> None:
+        self.set_point(Point(x, y), value)
 
     def __setitem__(
         self, key: GridIndex.Type, value: Union[int, CELLCLASS]
@@ -556,8 +559,8 @@ class SquareGameGrid(BaseGameGrid):
         super().check_integrity()
         if self.width != self.height:
             raise ValueError(
-                "A SquareGameGrid cannot have different side lenghts, but "
-                f"width is {self.width} and height is {self.height}"
+                "A SquareGameGrid cannot have different side lengths, but "
+                f"width=={self.width} and height=={self.height}"
             )
 
 
