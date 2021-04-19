@@ -18,10 +18,11 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 from typing import (
+    List,
     Mapping,
     Optional,
     Set,
-    Tuple,
+    Type,
 )
 import sys
 import logging
@@ -45,21 +46,22 @@ Snapshot = Mapping[Point, int]
 
 
 class Grid(SquareGameGrid):
-    CELLCLASS: type = Cell
+    CELLCLASS: Type = Cell
     # how many cells start non-zero
     STARTING_AMOUNT = 2
     # what values can be seeded in each cell
     SEEDING_VALUES = (2, 4)
     # 2^11 == 2048
     NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
+    # sys.maxsize == (2^63) - 1 on 64bits machines
+    CEILING = sys.maxsize
     DIRECTIONS = tuple(Directions)
 
     cells = SquareGameGrid.values
 
     @classmethod
     def is2048like(cls, n: int) -> bool:
-        # sys.maxsize == (2^63) - 1 on 64bits machines
-        while cls.NUMBERS[-1] < sys.maxsize and n > cls.NUMBERS[-1]:
+        while cls.NUMBERS[-1] < cls.CEILING and n > cls.NUMBERS[-1]:
             cls.NUMBERS.append(cls.NUMBERS[-1] * 2)
         return n in cls.NUMBERS
 

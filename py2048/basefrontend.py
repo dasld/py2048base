@@ -19,7 +19,6 @@
 
 from typing import Any, final, List, Optional
 from abc import ABC
-import sys
 from pathlib import Path
 import random
 
@@ -59,7 +58,7 @@ class Base2048Frontend(ABC):
         elif not grid.is2048like(goal):
             raise ValueError(
                 "goal must be a positive power of 2 "
-                f"smaller than {sys.maxsize}"
+                f"smaller than {grid.CEILING}"
             )
         # checks passed
         self.grid = grid

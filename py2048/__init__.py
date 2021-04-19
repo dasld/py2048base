@@ -28,7 +28,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    # Type,
+    Type,
     TYPE_CHECKING,
     Union,
 )
@@ -64,7 +64,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 24)
+__version__ = (0, 25)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -341,7 +341,7 @@ class BaseGameGrid(ABC):
     of that class.
     """
 
-    CELLCLASS: Any = None
+    CELLCLASS: Type = None
 
     def __init__(self, width: int, height: int) -> None:
         cls = self.CELLCLASS
@@ -351,8 +351,10 @@ class BaseGameGrid(ABC):
             )
         check_int(width)
         check_int(height)
-        if not width or not height:
-            raise ValueError("'width' and 'height' must be positive")
+        if min(width, height, default=0) < 2:
+            raise ValueError(
+                "'width' and 'height' must both greater than or equal to 2"
+            )
         self.mapping: Dict[Point, cls] = {}
         for x in range(width):
             for y in range(height):
