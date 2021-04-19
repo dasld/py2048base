@@ -97,6 +97,10 @@ class Grid(SquareGameGrid):
         return new
 
     def undo(self, ignore_empty: bool = True):
+        if len(self.history) <= 2:
+            if not ignore_empty:
+                raise IndexError
+            return
         try:
             # the last snapshot is the current state, so we forget it
             del self.history[-1]
