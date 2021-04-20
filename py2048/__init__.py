@@ -17,11 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-# from __future__ import annotations
+# allowing postoned evaluation of annotations; see:
+# https://www.python.org/dev/peps/pep-0563/
+from __future__ import annotations
+
 from typing import (
     Any,
     Callable,
     Dict,
+    Hashable,
     Iterator,
     List,
     Optional,
@@ -64,7 +68,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 27)
+__version__ = (0, 28)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -73,9 +77,11 @@ TESTING = False
 
 __all__ = [
     # global variables
+    "__version__",
     "APPNAME",
     "DATA_DIR",
     "INFTY",
+    "VERSION",
     # generic functions
     "typename",
     "hexid",
@@ -240,7 +246,7 @@ class Directions(enum.Enum):
         return ", ".join(map(str, cls))
 
     @classmethod
-    def paired_with(cls, keys):
+    def paired_with(cls, keys) -> Dict[Hashable, Directions]:
         got, target = len(keys), len(cls)
         if got != target:
             raise ValueError(
@@ -448,9 +454,7 @@ class BaseGameGrid(ABC):
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
-    def unpickle(
-        path, ignore_missing: bool = True
-    ) -> Optional["BaseGameGrid"]:
+    def unpickle(path, ignore_missing: bool = True) -> Optional[BaseGameGrid]:
         try:
             with open(path, "rb") as f:
                 return pickle.load(f)

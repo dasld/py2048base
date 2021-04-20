@@ -17,6 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
+# allowing postoned evaluation of annotations; see:
+# https://www.python.org/dev/peps/pep-0563/
+from __future__ import annotations
+
 from typing import (
     List,
     Mapping,
@@ -30,6 +34,7 @@ from itertools import chain
 import random
 
 from py2048 import (
+    Base2048Error,
     SquareGameGrid,
     Directions,
     ExpectationError,
@@ -49,10 +54,12 @@ class Grid(SquareGameGrid):
     CELLCLASS: Type = Cell
     # how many cells start non-zero
     STARTING_AMOUNT = 2
-    # what values can be seeded in each cell
+    # what values can be seeded in each cell; tuple instead of set because
+    # random.choice doesn't work with sets
     SEEDING_VALUES = (2, 4)
     # 2^11 == 2048
     NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
+    # no power of 2 higher than CEILING will be accepted as the game's goal
     # sys.maxsize == (2^63) - 1 on 64bits machines
     CEILING = sys.maxsize
     DIRECTIONS = tuple(Directions)
@@ -61,14 +68,29 @@ class Grid(SquareGameGrid):
 
     @classmethod
     def is2048like(cls, n: int) -> bool:
-        while cls.NUMBERS[-1] < cls.CEILING and n > cls.NUMBERS[-1]:
-            cls.NUMBERS.append(cls.NUMBERS[-1] * 2)
+        highest = cls.NUMBERS[-1]
+        while highest < cls.CEILING and n > highest:
+            highest *= 2
+            cls.NUMBERS.append(highest)
         return n in cls.NUMBERS
 
     def __init__(self, side: int = 4) -> None:
         logger.info("Creating a %dx%d Grid instance", side, side)
-        assert 0 < self.STARTING_AMOUNT < side ** 2
+        if self.STARTING_AMOUNT < 1:
+            raise Base2048Error(
+                "Cannot create a 2048 grid with less than 1 STARTING_AMOUNT"
+            )
+        side_squared = side ** 2
+        if self.STARTING_AMOUNT > side_squared:
+            raise Base2048Error(
+                f"Cannot create a 2048 grid with more than {side_squared} STARTING_AMOUNT's"
+            )
         super().__init__(side)
+        # the grid could start jammed if self.STARTING_AMOUNT == side ** 2
+        if self.is_jammed:
+            self.autofill()  # will also store a snapshot
+        else:
+            self.store_snapshot()
         self.empty_cells: Set[Cell] = set(self.cells())
         self.history: List[Snapshot] = []
         self.reset(on_init=True)
@@ -87,11 +109,12 @@ class Grid(SquareGameGrid):
         self.check_integrity()
 
     @classmethod
-    def new_from_snapshot(cls, snapshot: Snapshot) -> "Grid":
+    def new_from_snapshot(cls, snapshot: Snapshot) -> Grid:
         sqrt = len(snapshot) ** 0.5  # a float
         side = int(sqrt)
         if side != sqrt:
-            raise ValueError
+            name = cls.__name__
+            raise ValueError(f"Cannot create {name} from a non-square mapping")
         new = cls(side)
         new.update_with_snapshot(snapshot)
         return new
@@ -164,15 +187,22 @@ class Grid(SquareGameGrid):
             "Available cells for seeding: %s.",
             "  ".join(sorted(map(repr, self.empty_cells))),
         )
-        changed: Set[Cell] = set()
+        changed: List[Cell] = []
         for cell in random.sample(self.empty_cells, amount):
-            assert not cell  # must be 0
+            if cell:
+                raise Base2048Error(
+                    "A non-zero Cell has been selected for seeding"
+                )
             self.set_cell(cell, random.choice(self.SEEDING_VALUES))
-            changed.add(cell)
+            changed.append(cell)
+        if not changed:
+            raise Base2048Error(
+                "Seeding didn't changed the number of any Cell"
+            )
+        changed.sort()
         logger.debug(
-            "Seeded those cells: %s.", "  ".join(sorted(map(repr, changed))),
+            "Seeded those cells: %s.", "  ".join(map(repr, changed)),
         )
-        assert changed
         self.store_snapshot()
 
     def neighbor(self, cell: Cell, to: Directions) -> Optional[Cell]:
@@ -237,7 +267,7 @@ class Grid(SquareGameGrid):
         if pivot == cell:
             return False
         new_number = cell.number + pivot.number
-        # update the score only when the Cell moved to a positive pivot
+        # update the score only if the Cell moved to a positive pivot
         if pivot:
             pivot.lock()  # prevent further movement this cycle
             self.score += new_number
@@ -266,8 +296,7 @@ class Grid(SquareGameGrid):
         something_moved = False
         for cell in chain.from_iterable(vectors):
             this_moved = self.move_cell(cell, to)
-            # assert isinstance(moved, bool)
-            something_moved |= this_moved
+            something_moved = something_moved or this_moved
         if something_moved:
             logger.debug("Dragging %r changed me.", to)
             self.cycle += 1
