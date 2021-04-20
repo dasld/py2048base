@@ -86,13 +86,13 @@ class Grid(SquareGameGrid):
                 f"Cannot create a 2048 grid with more than {side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
+        self.empty_cells: Set[Cell] = set(self.cells())
+        self.history: List[Snapshot] = []
         # the grid could start jammed if self.STARTING_AMOUNT == side ** 2
         if self.is_jammed:
             self.autofill()  # will also store a snapshot
         else:
             self.store_snapshot()
-        self.empty_cells: Set[Cell] = set(self.cells())
-        self.history: List[Snapshot] = []
         self.reset(on_init=True)
 
     def snapshot(self) -> Snapshot:
