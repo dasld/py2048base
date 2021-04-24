@@ -18,7 +18,7 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Any, final, List, Optional
-from abc import ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
 import random
 
@@ -160,27 +160,22 @@ class Base2048Frontend(ABC):
             self.on_player_loss()
 
     # the following methods MUST be overriden
+    @abstractmethod
     def choose_direction(self) -> Directions:
-        raise NotImplementedError(
-            "'choose_direction' must be overriden by subclass"
-        )
+        pass
 
+    @abstractmethod
     def on_player_quit(self) -> Any:
-        raise NotImplementedError(
-            "'on_player_quit' must be overriden by subclass"
-        )
+        pass
 
+    @abstractmethod
     def on_player_victory(self) -> Any:
-        raise NotImplementedError(
-            "'on_player_victory' must be overriden by subclass"
-        )
+        pass
 
+    @abstractmethod
     def on_player_overvictory(self) -> Any:
-        raise NotImplementedError(
-            "'on_player_overvictory' must be overriden by subclass"
-        )
+        pass
 
+    @abstractmethod
     def on_player_loss(self) -> Any:
-        raise NotImplementedError(
-            "'on_player_loss' must be overriden by subclass"
-        )
+        pass

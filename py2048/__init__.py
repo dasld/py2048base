@@ -41,7 +41,7 @@ import sys
 import enum
 from pathlib import Path
 from collections import namedtuple
-from collections.abc import Sequence as AbcSequence
+from collections.abc import Collection
 from itertools import count
 import pickle
 
@@ -68,7 +68,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 29)
+__version__ = (0, 30)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -113,11 +113,12 @@ def hexid(thing: Any) -> str:
 
 
 def iscontainer(thing: Any) -> bool:
-    """Determines whether the argument is iterable, but not a `str`.
+    """Determines whether the argument is a sized iterable container, but not a
+    `str`.
     """
 
     cls = type(thing)
-    return issubclass(cls, AbcSequence) and not issubclass(cls, str)
+    return issubclass(cls, Collection) and not issubclass(cls, str)
 
 
 def type_check(
