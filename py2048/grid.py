@@ -335,7 +335,7 @@ class Grid(SquareGameGrid):
 
     def _autofill(self) -> None:
         numbers = self.NUMBERS[:-1]
-        for cell in self.grid.cells():
+        for cell in self.cells():
             cell.unlock()
             self.set_cell(cell, random.choice(numbers))
 

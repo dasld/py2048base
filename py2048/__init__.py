@@ -68,7 +68,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 30)
+__version__ = (0, 31)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
