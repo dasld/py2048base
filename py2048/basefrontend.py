@@ -17,9 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, final, List, Optional
+from typing import Any, final, Optional
 from abc import ABC, abstractmethod
-from pathlib import Path
 import random
 
 from py2048 import Base2048Error, Directions, type_check
@@ -31,7 +30,7 @@ class Base2048Frontend(ABC):
     frontend should inherit from this class, but shouldn't override this
     method.
     Many other methods are 'hooks' that either can, should, or must be
-    overriden.
+    overridden.
     """
 
     SLEEP_S = 1  # how many seconds to sleep when in auto mode
@@ -70,7 +69,7 @@ class Base2048Frontend(ABC):
         self.is_random = is_random
         self.victory = False
 
-    # play hooks: don't need to be overriden, but probably should
+    # play hooks: don't need to be overridden, but probably should
     def on_play(self) -> Any:
         pass
 
@@ -95,7 +94,7 @@ class Base2048Frontend(ABC):
     def guess_direction(self) -> Directions:
         return random.choice(self.grid.DIRECTIONS)
 
-    # MAIN LOOP: shouldn't be overriden
+    # MAIN LOOP: shouldn't be overridden
     @final
     def play2048(self) -> None:
         """The main loop repeatedly calls self.choice_function. If that raises
@@ -159,7 +158,7 @@ class Base2048Frontend(ABC):
             assert is_jammed
             self.on_player_loss()
 
-    # the following methods MUST be overriden
+    # the following methods MUST be overridden
     @abstractmethod
     def choose_direction(self) -> Directions:
         pass

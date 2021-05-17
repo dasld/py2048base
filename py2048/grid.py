@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-# allowing postoned evaluation of annotations; see:
+# allowing postponed evaluation of annotations; see:
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
@@ -83,7 +83,8 @@ class Grid(SquareGameGrid):
         side_squared = side ** 2
         if self.STARTING_AMOUNT > side_squared:
             raise Base2048Error(
-                f"Cannot create a 2048 grid with more than {side_squared} STARTING_AMOUNT's"
+                "Cannot create a 2048 grid with more than "
+                f"{side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
         self.empty_cells: Set[Cell] = set(self.cells())
@@ -93,6 +94,7 @@ class Grid(SquareGameGrid):
             self.autofill()  # will also store a snapshot
         else:
             self.store_snapshot()
+        # reset will define self.attempt, self.cycle, and self.score
         self.reset(on_init=True)
 
     def snapshot(self) -> Snapshot:
@@ -196,9 +198,7 @@ class Grid(SquareGameGrid):
             self.set_cell(cell, random.choice(self.SEEDING_VALUES))
             changed.append(cell)
         if not changed:
-            raise Base2048Error(
-                "Seeding didn't changed the number of any Cell"
-            )
+            raise Base2048Error("Seeding didn't changed the number of any Cell")
         changed.sort()
         logger.debug(
             "Seeded those cells: %s.", "  ".join(map(repr, changed)),
@@ -207,7 +207,7 @@ class Grid(SquareGameGrid):
 
     def neighbor(self, cell: Cell, to: Directions) -> Optional[Cell]:
         """Returns the next (possibly empty) Cell in the given direction, or
-        `None` if there"s none (if `self` is at the edge of the board,
+        `None` if there's none (if `self` is at the edge of the board,
         for example).
         """
 
@@ -235,9 +235,16 @@ class Grid(SquareGameGrid):
         return next_cell
 
     def pivot(self, cell: Cell, to: Directions) -> Cell:
-        """Returns the first non-empty, unlocked Cell in the given direction,
-        including itself. If all Cells in this direction are empty, returns the
-        one at the edge of the board instead.
+        """Returns either the cell B that cell A (passed as the function's
+        argument) will interact with when moving in `to` direction, or Cell A
+        itself.
+        This never returns `None`.
+        So Cell B is either:
+        i) the first unlocked Cell with a matching number; or
+        ii) the last empty Cell in this direction, if there's any; or
+        iii) cell A, if cell A is on the edge of the board.
+
+        Remeber that "Cell_X is empty" means `Cell_X.number == 0`.
         """
 
         current = last = cell
@@ -250,24 +257,26 @@ class Grid(SquareGameGrid):
                 continue
             if current.number == cell.number and not current.is_locked:
                 return current
-            # in this case, the new Cell's number matches, but it is locked
-            # because it has already moved this cycle, so we ignore it
+            # in this case, either:
+            # i) this Cell's number doesn't match; or
+            # ii) this Cell's number matches, but it's locked because it has
+            # already moved this cycle
             return last
 
     def move_cell(self, cell: Cell, to: Directions) -> bool:
         """Attempts to move `cell` in the given `direction`. When successful,
         locks the pivot and updates the score (if the starting number was
         positive), then updates the numbers of the `cell` and its pivot.
-        Returns whether movement ocurred.
+        Returns whether movement occurred.
         """
 
         if not cell:  # empty Cells don't move
             return False
         pivot = self.pivot(cell, to)
-        if pivot == cell:
+        if pivot == cell:  # a Cell can't move into itself
             return False
         new_number = cell.number + pivot.number
-        # update the score only if the Cell moved to a positive pivot
+        # increase the score only if the Cell moved to a positive pivot
         if pivot:
             pivot.lock()  # prevent further movement this cycle
             self.score += new_number
@@ -276,10 +285,10 @@ class Grid(SquareGameGrid):
         return True
 
     def drag(self, to: Directions) -> bool:
-        """If given a valid direction, increments its attempts count, then
-        tries to move every cell in the given direction, starting with the
-        vectors closest to it. If that changed anything, it increments its
-        cycle by 1 and seeds itself by 1.
+        """If given a valid direction, increments its attempts count, then tries
+        to move every cell in the given direction, starting with the vectors
+        closest to it. If that changed anything, it increments its cycle by 1
+        and seeds itself by 1.
         """
 
         if to == Directions.LEFT:

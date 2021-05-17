@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-# allowing postoned evaluation of annotations; see:
+# allowing postponed evaluation of annotations; see:
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
@@ -48,8 +48,7 @@ import pickle
 import appdirs  # https://pypi.org/project/appdirs
 from more_itertools import unzip
 
-
-## CONSTANTS
+# CONSTANTS
 # generic constants
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
 ModuleType = type(sys)  # just for annotation purposes
@@ -68,12 +67,11 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 31)
+__version__ = (0, 32)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
 TESTING = False
-
 
 __all__ = [
     # global variables
@@ -82,6 +80,7 @@ __all__ = [
     "DATA_DIR",
     "INFTY",
     "VERSION",
+    "ModuleType",
     # generic functions
     "typename",
     "hexid",
@@ -103,12 +102,18 @@ __all__ = [
 ]
 
 
-## GENERAL-PURPOSE FUNCTIONS
+# GENERAL-PURPOSE FUNCTIONS
 def typename(thing: Any) -> str:
+    """Returns the name of its argument's class.
+    """
+
     return type(thing).__name__
 
 
 def hexid(thing: Any) -> str:
+    """Returns the hexadecimal `id` of its argument as a string.
+    """
+
     return hex(id(thing))
 
 
@@ -124,9 +129,9 @@ def iscontainer(thing: Any) -> bool:
 def type_check(
     value: Any, expected: Union[type, Sequence[type]], positive: bool = True
 ) -> None:
-    """If the `positive` argument is True, raises an ExpectationError if the
+    """If the `positive` argument is `True`, raises an ExpectationError if the
     type of `value` is not listed in, or differs from, `expected`.
-    If `positive` is False, raises the error if the type of `value` is listed
+    If `positive` is `False`, raises the error if the type of `value` is listed
     in, or equals, `expected`.
     """
 
@@ -148,7 +153,7 @@ def check_int(i: int) -> None:
         raise NegativeIntegerError(i)
 
 
-## CLASSES
+# CLASSES
 # Exceptions
 class Base2048Error(Exception):
     pass
@@ -216,8 +221,9 @@ class Point(namedtuple("Point", "x y")):
     __slots__ = ()
 
     def __init__(self, x: int, y: int) -> None:
-        check_int(x)
-        check_int(y)
+        for i in (x, y):
+            check_int(i)
+        super().__init__()
 
     def __repr__(self) -> str:
         return f"Point({self.x}, {self.y})"
@@ -335,10 +341,10 @@ class GridIndex:
         return self._str
 
 
-## MAIN CLASS IN THIS MODULE
+# MAIN CLASS IN THIS MODULE
 class BaseGameGrid(ABC):
     """Wrapper over `dict` that maps Points into objects that must have the
-    type CELLCLASS. CELLCLASS is `None`, which means that it must be overidden
+    type CELLCLASS. CELLCLASS is `None`, which means that it must be overridden
     when subclassing this class.
     The class can abstract any table with orthogonally aligned square cells,
     such as the chess and checkers boards, sudoku grids, and so on.
@@ -354,7 +360,7 @@ class BaseGameGrid(ABC):
         cls = self.CELLCLASS
         if cls is None:
             raise NotImplementedError(
-                "CELLCLASS must be overriden when subclassing BaseGameGrid"
+                "CELLCLASS must be overridden when subclassing BaseGameGrid"
             )
         check_int(width)
         check_int(height)
@@ -428,8 +434,8 @@ class BaseGameGrid(ABC):
 
     def check_integrity(self) -> None:
         # check columns
-        # the following ensures that there are no "gaps" nor "jumps" in the
-        # column indexes, and then in the row indexes
+        # the following ensures that there are neither "gaps" nor "jumps" in
+        # the column indexes, and then in the row indexes
         for actual, target in zip(self.x_axis, count()):
             if actual != target:
                 raise ValueError(
@@ -477,16 +483,16 @@ class BaseGameGrid(ABC):
         restrictions: Set[Callable] = set()
         # restricting the X-axis
         if isinstance(x, int):
-            restrictions.add(lambda key: key.x == x)
+            restrictions.add(lambda the_key: the_key.x == x)
         elif isinstance(x, slice) and x != NULL_SLICE:
             x_range = self.slice2range(x)
-            restrictions.add(lambda key: key.x in x_range)
+            restrictions.add(lambda the_key: the_key.x in x_range)
         # restricting the Y-axis
         if isinstance(y, int):
-            restrictions.add(lambda key: key.y == y)
+            restrictions.add(lambda the_key: the_key.y == y)
         elif isinstance(y, slice) and y != NULL_SLICE:
             y_range = self.slice2range(y)
-            restrictions.add(lambda key: key.y in y_range)
+            restrictions.add(lambda the_key: the_key.y in y_range)
         # assembling everything
         selected: List[Point] = []
         for this_key in self:
@@ -516,7 +522,7 @@ class BaseGameGrid(ABC):
         return selected
 
     def set_point(self, key: Point, value: Any) -> None:
-        """This method exists to be overriden by subclasses, if necessary.
+        """This method exists to be overridden by subclasses, if necessary.
         """
 
         type_check(value, self.CELLCLASS)

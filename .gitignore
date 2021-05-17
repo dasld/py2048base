@@ -12,8 +12,8 @@ py2048/frontends/__pycache__/
 # shell scripts
 *.sh
 
-# C extensions
-*.so
+# pycharm folder
+.idea*
 
 # Distribution / packaging
 build/

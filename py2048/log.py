@@ -18,18 +18,17 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-from pathlib import Path
 import logging
 
 from py2048 import APPNAME, DATA_DIR
 
 
-__all__ = ["logger", "setup_logger"]
+__all__ = ["LOGGER", "setup_logger"]
 
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-fpath = str(DATA_DIR.resolve() / f"{APPNAME}.log")
+fpath = f"{DATA_DIR.resolve()}APPNAME.log"
 
 # setup the default handlers
 HANDLERS = (
@@ -64,4 +63,4 @@ def setup_logger(name: str) -> logging.Logger:
 
 
 # set up the main logger and equip it
-logger = setup_logger(APPNAME)
+LOGGER = setup_logger(APPNAME)

@@ -20,7 +20,7 @@ setuptools.setup(
     description="Python clone of the famous 2048 game.",
     long_description=read("README.rst"),
     long_description_content_type="text/x-rst",
-    url = "https://github.com/dasld/py2048base",
+    url="https://github.com/dasld/py2048base",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -28,10 +28,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.8",
         "Topic :: Games/Entertainment :: Puzzle Games",
     ],
-    install_requires=[  # alphabetical order
-        "appdirs>=1",
-        "more-itertools>=8",
-    ],
+    install_requires=["appdirs>=1", "more-itertools>=8",],  # alphabetical order
     packages=[APPNAME],
     python_requires=">=3.8",
     license="GPL",
