@@ -17,13 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Sequence
 from functools import partialmethod
+from typing import Sequence
 
 from py2048 import check_int, Point, type_check
 
 
 class Cell:
+    """Individual number in the 2048 grid.
+
+    Besides the number, it contains a `_lock` boolean that represents whether
+    it can move in this cycle (this prevents an 8 moving into another 8 and
+    the resulting 16 merging into another 16, for example.
+    """
+
     def __init__(self, point: Point, number: int = 0) -> None:
         type_check(point, Point)
         self.point = point
@@ -46,28 +53,22 @@ class Cell:
         return bool(self.number)
 
     def __eq__(self, other) -> bool:
-        """Docs state that 'If a class does not define an `__eq__()` method it
-        should not define a `__hash__()` operation either'. We want to define
-        `__hash__`, so we must define `__eq__` as well. Two Cells are the same
-        Cell iff they're at the same place, no matter their number.
-        """
-
+        # docs state that 'If a class does not define an `__eq__()` method it
+        # should not define a `__hash__()` operation either'. We want to define
+        # `__hash__`, so we must define `__eq__` as well. Two Cells are the
+        # same Cell iff they're at the same place, no matter their number.
         if isinstance(other, type(self)):
             return self.point == other.point
         return NotImplemented
 
     def __hash__(self) -> int:
-        """We want Cells to be hashable so that they can be used in sets.
-        """
-
+        # we want Cells to be hashable so that they can be used in sets
         # if two objects test as equal, then they MUST have the same hash value
         # objects that have a hash MUST produce the same hash over time
         return hash((type(self), self.x, self.y))
 
     def __gt__(self, other) -> bool:
-        """Defined just to allow Cells to be ordered and sorted.
-        """
-
+        # defined just to allow Cells to be ordered and sorted
         if isinstance(other, type(self)):
             return self.point > other.point
         return NotImplemented

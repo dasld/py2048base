@@ -17,22 +17,21 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-import sys
 import logging
+import sys
 
 from py2048 import APPNAME, DATA_DIR
-
 
 __all__ = ["LOGGER", "setup_logger"]
 
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-fpath = f"{DATA_DIR.resolve()}APPNAME.log"
+FPATH = str(DATA_DIR.resolve() / APPNAME / ".log")
 
 # setup the default handlers
 HANDLERS = (
-    logging.FileHandler(filename=fpath, mode="w"),
+    logging.FileHandler(filename=FPATH, mode="w"),
     logging.StreamHandler(stream=sys.stderr),
 )
 HANDLERS[-1].setLevel(logging.ERROR)  # will override the logger's level

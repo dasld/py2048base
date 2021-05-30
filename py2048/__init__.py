@@ -21,6 +21,14 @@
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
+import enum
+import pickle
+import sys
+from abc import ABC
+from collections import namedtuple
+from collections.abc import Collection
+from itertools import count
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -36,14 +44,6 @@ from typing import (
     TYPE_CHECKING,
     Union,
 )
-from abc import ABC
-import sys
-import enum
-from pathlib import Path
-from collections import namedtuple
-from collections.abc import Collection
-from itertools import count
-import pickle
 
 import appdirs  # https://pypi.org/project/appdirs
 from more_itertools import unzip
@@ -67,7 +67,7 @@ INFTY = float("inf")
 NULL_SLICE = slice(None)
 # specific constants
 APPNAME = __name__
-__version__ = (0, 32)
+__version__ = (0, 33)
 VERSION = ".".join(map(str, __version__))
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
@@ -118,8 +118,7 @@ def hexid(thing: Any) -> str:
 
 
 def iscontainer(thing: Any) -> bool:
-    """Determines whether the argument is a sized iterable container, but not a
-    `str`.
+    """Determines whether the argument is a iterable, but not a `str`.
     """
 
     cls = type(thing)
@@ -221,8 +220,8 @@ class Point(namedtuple("Point", "x y")):
     __slots__ = ()
 
     def __init__(self, x: int, y: int) -> None:
-        for i in (x, y):
-            check_int(i)
+        check_int(x)
+        check_int(y)
         super().__init__()
 
     def __repr__(self) -> str:
@@ -238,7 +237,7 @@ Line = Tuple[Point]
 @enum.unique
 class Directions(enum.Enum):
     """The four orthogonal directions in the WASD order. The value of each
-    Directions object is it's lowercased name: `Directions.UP.value == "up"`,
+    Directions object is its lowercase name: `Directions.UP.value == "up"`,
     and so on.
     """
 

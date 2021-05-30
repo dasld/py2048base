@@ -21,6 +21,10 @@
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
+import logging
+import random
+import sys
+from itertools import chain
 from typing import (
     List,
     Mapping,
@@ -28,10 +32,6 @@ from typing import (
     Set,
     Type,
 )
-import sys
-import logging
-from itertools import chain
-import random
 
 from py2048 import (
     Base2048Error,
@@ -57,22 +57,32 @@ class Grid(SquareGameGrid):
     # what values can be seeded in each cell; tuple instead of set because
     # random.choice doesn't work with sets
     SEEDING_VALUES = (2, 4)
-    # 2^11 == 2048
+    # the `is2048like` method will use this list to validate a goal
+    # 2**11 == 2048
     NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
     # no power of 2 higher than CEILING will be accepted as the game's goal
-    # sys.maxsize == (2^63) - 1 on 64bits machines
+    # sys.maxsize == (2**63)-1 on 64bits machines
     CEILING = sys.maxsize
-    DIRECTIONS = tuple(Directions)
 
     cells = SquareGameGrid.values
 
     @classmethod
-    def is2048like(cls, n: int) -> bool:
+    def is2048like(cls, number: int) -> bool:
+        """Tell whether `number` is a positive power of 2 no greater than
+        `cls.CEILING`.
+
+        :param int number: the integer to check
+        :return: either valid or invalid
+        """
+
         highest = cls.NUMBERS[-1]
-        while highest < cls.CEILING and n > highest:
+        assert highest == max(cls.NUMBERS)
+        while number > highest:
             highest *= 2
+            if highest >= cls.CEILING:
+                break
             cls.NUMBERS.append(highest)
-        return n in cls.NUMBERS
+        return number in cls.NUMBERS
 
     def __init__(self, side: int = 4) -> None:
         logger.info("Creating a %dx%d Grid instance", side, side)
@@ -80,30 +90,61 @@ class Grid(SquareGameGrid):
             raise Base2048Error(
                 "Cannot create a 2048 grid with less than 1 STARTING_AMOUNT"
             )
-        side_squared = side ** 2
+        side_squared = side * side
         if self.STARTING_AMOUNT > side_squared:
             raise Base2048Error(
                 "Cannot create a 2048 grid with more than "
                 f"{side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
+        # the grid starts empty, so every Cell starts in the `empty_cells` set
         self.empty_cells: Set[Cell] = set(self.cells())
         self.history: List[Snapshot] = []
+        # `attempt` is how many times the player has given input, even if that
+        # didn't change the game state
+        self.attempt = 0
+        # `cycle` is how many times the game state has changed
+        self.cycle = 0
+        # `score` is a counter that increases by N each time an N-numbered Cell
+        # is formed
+        self.score = 0
         # the grid could start jammed if self.STARTING_AMOUNT == side ** 2
         if self.is_jammed:
             self.autofill()  # will also store a snapshot
         else:
             self.store_snapshot()
-        # reset will define self.attempt, self.cycle, and self.score
-        self.reset(on_init=True)
+        self.check_integrity()
+
+    def reset(self) -> None:
+        """Set all counters and Cells to 0 and clear the snapshots history.
+
+        Also unlock every Cell.
+        """
+
+        self.attempt = 0
+        self.cycle = 0
+        self.score = 0
+        for cell in self.cells():
+            cell.unlock()
+            self.set_cell(cell, 0)
+        self.history.clear()
+        self.check_integrity()
 
     def snapshot(self) -> Snapshot:
         return {point: cell.number for point, cell in self.items()}
 
-    def store_snapshot(self):
+    def store_snapshot(self) -> None:
+        """Store the current game state in `history`.
+        """
+
         self.history.append(self.snapshot())
 
     def update_with_snapshot(self, snapshot: Snapshot) -> None:
+        """Replace each Cell number with the corresponding `snapshot` value.
+
+        Also unlock every Cell.
+        """
+
         for point, number in snapshot.items():
             cell = self[point]
             cell.unlock()
@@ -112,6 +153,9 @@ class Grid(SquareGameGrid):
 
     @classmethod
     def new_from_snapshot(cls, snapshot: Snapshot) -> Grid:
+        """Return a new Grid with the values of `snapshot`.
+        """
+
         sqrt = len(snapshot) ** 0.5  # a float
         side = int(sqrt)
         if side != sqrt:
@@ -121,11 +165,14 @@ class Grid(SquareGameGrid):
         new.update_with_snapshot(snapshot)
         return new
 
-    def undo(self, ignore_empty: bool = True):
-        if len(self.history) <= 2:
-            if not ignore_empty:
-                raise IndexError
-            return
+    def undo(self, ignore_empty: bool = True) -> None:
+        """Restore the game to its previous state.
+
+        :param bool ignore_empty: whether to ignore a lack of snapshots
+        :raises IndexError: if there are less than 2 snapshots (one for the
+            current state, one for the previous one
+        """
+
         try:
             # the last snapshot is the current state, so we forget it
             del self.history[-1]
@@ -135,20 +182,9 @@ class Grid(SquareGameGrid):
         except IndexError:
             if not ignore_empty:
                 raise
-        else:
-            self.update_with_snapshot(snap)
-            self.store_snapshot()
-
-    def reset(self, on_init: bool = False) -> None:
-        self.attempt = 0
-        self.cycle = 0
-        self.score = 0
-        if not on_init:
-            for cell in self.cells():
-                cell.unlock()
-                self.set_cell(cell, 0)
-            self.history.clear()
-        self.check_integrity()
+            return
+        self.update_with_snapshot(snap)
+        self.store_snapshot()
 
     @property
     def largest(self) -> int:
@@ -156,33 +192,41 @@ class Grid(SquareGameGrid):
 
     @property
     def is_empty(self) -> bool:
-        """Returns whether every Cell is empty (ie, 0-numbered).
+        """Return whether every Cell is empty (ie, 0-numbered).
         """
+
         assert len(self.empty_cells) <= len(self)
         return len(self.empty_cells) == len(self)
 
     def set_cell(self, cell: Cell, number: int) -> None:
-        """Assigns a number to a Cell and updates `empty_cells`.
+        """Assign `number` to `Cell` and update `empty_cells`.
         """
 
         cell.number = number
-        if number and (cell in self.empty_cells):
-            self.empty_cells.remove(cell)
-        elif not number and (cell not in self.empty_cells):
+        if number:
+            # `discard` removes an element from a set but doesn't raise an
+            # exception if it wasn't present
+            self.empty_cells.discard(cell)
+        else:
             self.empty_cells.add(cell)
 
     def set_point(self, key: Point, number: int) -> None:
-        """Overrides a method of the base class. To assign a number to a Point
+        """Assign `number` to the Cell at `key`.
+
+        This overrides a base class method. To assign a number to a Point
         is to change its Cell's number, not to replace the Cell with the
-        number.
+        number!
         This method is used by `BaseGameGrid` methods such as `__setitem__`.
         """
 
         self.set_cell(self[key], number)
 
     def seed(self, amount: int = STARTING_AMOUNT) -> None:
-        """Assigns a number randomly chosen from `Grid.SEEDING_VALUES` to a
-        few (`amount`) randomly selected empty Cells.
+        """Assign a random integer from `Grid.SEEDING_VALUES` to randomly
+        selected empty Cells.
+
+        :param int amount: how many cells to seed;
+            defaults to `STARTING_AMOUNT`
         """
 
         logger.debug(
@@ -198,7 +242,7 @@ class Grid(SquareGameGrid):
             self.set_cell(cell, random.choice(self.SEEDING_VALUES))
             changed.append(cell)
         if not changed:
-            raise Base2048Error("Seeding didn't changed the number of any Cell")
+            raise Base2048Error("Seeding didn't change the number of any Cell")
         changed.sort()
         logger.debug(
             "Seeded those cells: %s.", "  ".join(map(repr, changed)),
@@ -206,9 +250,10 @@ class Grid(SquareGameGrid):
         self.store_snapshot()
 
     def neighbor(self, cell: Cell, to: Directions) -> Optional[Cell]:
-        """Returns the next (possibly empty) Cell in the given direction, or
-        `None` if there's none (if `self` is at the edge of the board,
-        for example).
+        """Return the next Cell in the given direction.
+
+        This returns `None` if there's no such Cell (if `cell` is at the edge
+        of the board, for example).
         """
 
         x, y = cell.point
@@ -220,12 +265,6 @@ class Grid(SquareGameGrid):
             y += 1
         elif to == Directions.UP:
             y -= 1
-        elif isinstance(to, Directions):
-            # very bad
-            raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
-        else:
-            # EVEN WORSE
-            raise ExpectationError(to, Directions)
         try:
             next_point = Point(x, y)  # NegativeIntegerError
             next_cell = self[next_point]  # KeyError
@@ -235,16 +274,14 @@ class Grid(SquareGameGrid):
         return next_cell
 
     def pivot(self, cell: Cell, to: Directions) -> Cell:
-        """Returns either the cell B that cell A (passed as the function's
-        argument) will interact with when moving in `to` direction, or Cell A
-        itself.
-        This never returns `None`.
-        So Cell B is either:
-        i) the first unlocked Cell with a matching number; or
-        ii) the last empty Cell in this direction, if there's any; or
-        iii) cell A, if cell A is on the edge of the board.
+        """Return either `cell` itself, or the cell that it will interact with.
 
-        Remeber that "Cell_X is empty" means `Cell_X.number == 0`.
+        This never returns `None`. It will return either:
+        i) the first unlocked Cell with a matching number; or
+        ii) the last empty Cell in direction `to`, if there's any; or
+        iii) `cell` itself.
+
+        Remember that "Cell_X is empty" means `Cell_X.number == 0`.
         """
 
         current = last = cell
@@ -260,14 +297,17 @@ class Grid(SquareGameGrid):
             # in this case, either:
             # i) this Cell's number doesn't match; or
             # ii) this Cell's number matches, but it's locked because it has
-            # already moved this cycle
+            #     already moved this cycle
             return last
 
     def move_cell(self, cell: Cell, to: Directions) -> bool:
-        """Attempts to move `cell` in the given `direction`. When successful,
-        locks the pivot and updates the score (if the starting number was
-        positive), then updates the numbers of the `cell` and its pivot.
-        Returns whether movement occurred.
+        """Attempt to move `cell` in direction `to`.
+
+        When successful, lock the pivot and update the score (if the starting
+        number was positive), then update the numbers of the `cell` and of its
+        pivot.
+
+        :return: whether movement occurred
         """
 
         if not cell:  # empty Cells don't move
@@ -275,6 +315,7 @@ class Grid(SquareGameGrid):
         pivot = self.pivot(cell, to)
         if pivot == cell:  # a Cell can't move into itself
             return False
+        # we can't use `cell.number * 2` or `pivot.number * 2` because
         new_number = cell.number + pivot.number
         # increase the score only if the Cell moved to a positive pivot
         if pivot:
@@ -285,10 +326,15 @@ class Grid(SquareGameGrid):
         return True
 
     def drag(self, to: Directions) -> bool:
-        """If given a valid direction, increments its attempts count, then tries
-        to move every cell in the given direction, starting with the vectors
-        closest to it. If that changed anything, it increments its cycle by 1
-        and seeds itself by 1.
+        """Try to move every cell towards `to`, starting with the vectors
+        closest to the origin.
+
+        Increment the attempt counter, then try to move every cell in the
+        given direction, starting with the vectors closest to the origin.
+        If that changed anything, increment the cycle counter by 1 and seed
+        itself by 1.
+
+        :return: whether the game state changed
         """
 
         if to == Directions.LEFT:
@@ -299,6 +345,12 @@ class Grid(SquareGameGrid):
             vectors = tuple(self.rows)
         elif to == Directions.DOWN:
             vectors = tuple(self.rows)[::-1]
+        elif isinstance(to, Directions):
+            # very bad
+            raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
+        else:
+            # EVEN WORSE
+            raise ExpectationError(to, Directions)
         #
         self.attempt += 1
         logger.debug("Attempt increased to %d.", self.attempt)
@@ -317,10 +369,10 @@ class Grid(SquareGameGrid):
 
     @property
     def is_jammed(self) -> bool:
-        """Returns False if there's any legal movement left for the player,
-        True if there's none.
-        Rationale: if there's at least one zero Cell, the Grid is not jammed,
-        because the player can at least fill the empty spot.
+        """Tell whether there's any legal movement left for the player.
+
+        If there's at least one zero `Cell`, the `Grid` isn't jammed, because
+        the player can at least fill the blank.
         If there are no zeroes, check if any two adjacent Cells have the same
         number; stop as soon as any such pair is found.
         Is there a better/faster way of doing this without checking every Cell?
@@ -349,6 +401,14 @@ class Grid(SquareGameGrid):
             self.set_cell(cell, random.choice(numbers))
 
     def autofill(self, no_jamming: bool = True) -> None:
+        """Give each cell a random number.
+
+        Store a snapshot afterwards. The numbers are always greater than 0 and
+        smaller than 2048.
+
+        :param bool no_jamming: if the result cannot be a jammed grid
+        """
+
         self._autofill()
         if no_jamming:
             while self.is_jammed:

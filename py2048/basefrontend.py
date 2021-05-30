@@ -17,24 +17,28 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, final, Optional
-from abc import ABC, abstractmethod
 import random
+from abc import ABC, abstractmethod
+from typing import Any, final, Optional
 
 from py2048 import Base2048Error, Directions, type_check
 from py2048.grid import Grid
 
 
 class Base2048Frontend(ABC):
-    """This abstract class implements the `play2048` method. A concrete
-    frontend should inherit from this class, but shouldn't override this
-    method.
+    """Abstract class that implements the `play2048` method.
+
+    A concrete frontend should inherit from this class, but shouldn't override
+    this method.
     Many other methods are 'hooks' that either can, should, or must be
     overridden.
     """
 
-    SLEEP_S = 1  # how many seconds to sleep when in auto mode
-    # converting seconds to mseconds
+    # a tuple version of the enum to make it work with `random`
+    DIRECTIONS = tuple(Directions)
+    # how many seconds to sleep when in auto mode
+    SLEEP_S = 1
+    # converting seconds to milliseconds
     SLEEP_MS = int(SLEEP_S * 1_000)
 
     def restart(self) -> None:
@@ -54,7 +58,7 @@ class Base2048Frontend(ABC):
         # `goal = goal or 2048` would allow "goal = 0" to pass silently
         if goal is None:
             goal = 2048
-        elif not grid.is2048like(goal):
+        elif not Grid.is2048like(goal):
             raise ValueError(
                 "goal must be a positive power of 2 "
                 f"smaller than {grid.CEILING}"
@@ -76,39 +80,38 @@ class Base2048Frontend(ABC):
     def on_attempt(self) -> Any:
         pass
 
-    def after_choice(self, choice: str) -> Any:
+    def after_choice(self, choice: Directions) -> Any:
         pass
 
-    def after_change(self, choice: str) -> Any:
+    def after_change(self, choice: Directions) -> Any:
         pass
 
-    def after_nochange(self, choice: str) -> Any:
+    def after_nochange(self, choice: Directions) -> Any:
         pass
 
-    def after_attempt(self, choice: str) -> Any:
+    def after_attempt(self, choice: Directions) -> Any:
         pass
 
     def after_play(self) -> Any:
         pass
 
     def guess_direction(self) -> Directions:
-        return random.choice(self.grid.DIRECTIONS)
+        return random.choice(self.DIRECTIONS)
 
     # MAIN LOOP: shouldn't be overridden
     @final
     def play2048(self) -> None:
-        """The main loop repeatedly calls self.choice_function. If that raises
-        `KeyboardInterrupt`, it returns immediately, without even calling
+        """The main loop repeatedly calls `self.choice_function`. If that
+        raises `KeyboardInterrupt`, it returns immediately, skipping
         `self.after_play()`. If that raises `EOFError`, it breaks the loop and
         calls `self.after_play()`.
-        This loops until either a) the grid is jammed; or b) the player exited;
+        This loops until either a) the grid is jammed; or b) the player exits;
         or c) the goal has been reached for the first time.
         """
 
         player_quit = False
         grid = self.grid
         self.on_play()
-        # can't play with an empty board
         if grid.is_empty:
             raise Base2048Error(
                 f"Asked to play 2048 with an empty grid:\n{grid}"
