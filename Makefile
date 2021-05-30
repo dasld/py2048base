@@ -7,6 +7,10 @@ all:
 	black -l 80 *.py ./py2048/*.py
 
 
+push:
+	git push -u origin main
+
+
 build:
 	python3 -m build --no-isolation
 
@@ -21,4 +25,4 @@ clean:
 	find . -type d -name __pycache__ -delete
 
 
-.PHONY: all build clean
+.PHONY: all push build upload clean
