@@ -27,7 +27,7 @@ __all__ = ["LOGGER", "setup_logger"]
 
 # setup log folder and log file path
 DATA_DIR.mkdir(exist_ok=True)
-FPATH = str(DATA_DIR.resolve() / APPNAME / ".log")
+FPATH = f"{DATA_DIR.resolve()}{APPNAME}.log"
 
 # setup the default handlers
 HANDLERS = (

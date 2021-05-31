@@ -43,7 +43,6 @@ from py2048 import (
 )
 from py2048.cell import Cell
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -316,6 +315,7 @@ class Grid(SquareGameGrid):
         if pivot == cell:  # a Cell can't move into itself
             return False
         # we can't use `cell.number * 2` or `pivot.number * 2` because
+        # the numbers differ when a positive Cell moves into a 0 one
         new_number = cell.number + pivot.number
         # increase the score only if the Cell moved to a positive pivot
         if pivot:
