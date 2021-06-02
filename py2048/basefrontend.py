@@ -122,7 +122,7 @@ class Base2048Frontend(ABC):
             raise Base2048Error(
                 f"Asked to play 2048 with a jammed grid:\n{grid}"
             )
-        while not (is_jammed or self.victory):
+        while not is_jammed:
             self.on_attempt()
             try:
                 choice = self.choice_function()
@@ -143,8 +143,14 @@ class Base2048Frontend(ABC):
             else:
                 self.after_nochange(choice)
             self.after_attempt(choice)
+            # if the player kept playing after winning, we don't want to exit
+            # this loop
             if not self.victory and grid.largest >= self.goal:
+                # first victory in this game loop; if the player keeps playing,
+                # the time the grid jams will be considered an "overvictory"
+                # instead of a loss
                 self.victory = True
+                break
         # after loop stuff
         self.after_play()
         if player_quit:
