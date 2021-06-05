@@ -2,21 +2,24 @@
 # https://stackoverflow.com/a/14109796
 
 
-all:
-	clear
-	black -l 80 *.py ./py2048/*.py
-
-
-push:
-	git push -u origin main
+.PHONY: format push build upload clean
 
 
 build:
 	python3 -m build --no-isolation
 
 
+push:
+	git push -u origin main
+
+
 upload:
 	twine upload dist/*
+
+
+format:
+	clear
+	black -l 80 *.py ./py2048/*.py
 
 
 clean:
@@ -24,5 +27,3 @@ clean:
 	find . -type f -name *.pyc -delete
 	find . -type d -name __pycache__ -delete
 
-
-.PHONY: all push build upload clean
