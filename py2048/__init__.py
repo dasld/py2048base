@@ -60,7 +60,7 @@ from py2048.constants import (
 # _TESTING is used only in setup.py
 _TESTING = False
 
-__version__ = (0, 39)
+__version__ = (0, 40)
 APPNAME = __name__
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 VERSION = ".".join(map(str, __version__))

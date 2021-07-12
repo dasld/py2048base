@@ -93,7 +93,7 @@ class Grid(SquareGameGrid):
             cls.NUMBERS.append(highest)
         return number in cls.NUMBERS
 
-    def __init__(self, side: int = 4) -> None:
+    def __init__(self, side: int = 4, storing_snapshot: bool = True) -> None:
         logger.info("Creating a %dx%d Grid instance", side, side)
         if self.STARTING_AMOUNT < 1:
             raise Base2048Error(
@@ -126,7 +126,7 @@ class Grid(SquareGameGrid):
         # the grid could start jammed if self.STARTING_AMOUNT == side ** 2
         if self.is_jammed:
             self.autofill()  # will also store a snapshot
-        else:
+        elif storing_snapshot:
             self.store_snapshot()
         self.check_integrity()
 
@@ -145,17 +145,20 @@ class Grid(SquareGameGrid):
         self.history.clear()
         self.check_integrity()
 
-    def store_snapshot(self) -> None:
-        """Store the current game state in `history`.
+    def store_snapshot(self, snapshot: Optional[Snapshot] = None) -> None:
+        """Store a game state in `history`.
+
+        If `snapshot` isn't provided, it defaults to the current game state.
         """
 
-        snapshot = {point: cell.number for point, cell in self.items()}
+        if snapshot is None:
+            snapshot = {point: cell.number for point, cell in self.items()}
         self.history.append(snapshot)
 
     def update_with_snapshot(self, snapshot: Snapshot) -> None:
         """Replace each Cell number with the corresponding `snapshot` value.
 
-        Also unlock every Cell.
+        Also unlock every Cell. This DOESN'T store the snapshot.
         """
 
         for point, number in snapshot.items():
@@ -174,8 +177,9 @@ class Grid(SquareGameGrid):
         if side != sqrt:
             name = classname(cls)
             raise ValueError(f"Cannot create {name} from a non-square mapping")
-        new = cls(side)
+        new = cls(side, storing_snapshot=False)
         new.update_with_snapshot(snapshot)
+        new.store_snapshot()
         return new
 
     def undo(self, ignore_empty: bool = True) -> None:
@@ -191,15 +195,15 @@ class Grid(SquareGameGrid):
             del self.history[-1]
             # now the last snapshot is the previous state, so we retrieve and
             # forget it
-            snap = self.history.pop()
+            past = self.history.pop()
         else:
             if not ignore_empty:
                 raise IndexError(
                     "cannot undo last movement: too few snapshots available"
                 )
             return
-        self.update_with_snapshot(snap)
-        self.store_snapshot()
+        self.update_with_snapshot(past)
+        self.store_snapshot(past)
 
     @property
     def largest(self) -> int:
