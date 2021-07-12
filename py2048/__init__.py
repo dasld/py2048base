@@ -60,7 +60,7 @@ from py2048.constants import (
 # _TESTING is used only in setup.py
 _TESTING = False
 
-__version__ = (0, 40)
+__version__ = (0, 41)
 APPNAME = __name__
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 VERSION = ".".join(map(str, __version__))
@@ -310,17 +310,16 @@ class GridIndex:
 
     SingletonType = Union[int, slice, EllipsisType]
     Type = Union[SingletonType, Tuple[SingletonType]]
+    _NONE_MSG = "Cannot make a GridIndex from None"
 
     def __init__(self, *args: Sequence[SingletonType]) -> None:
-        cls = typename(self)
-        none_error = f"Cannot make a {cls} from None"
         length = len(args)
         if not length:
             x = y = NONE_SLICE
         elif length == 1:
             the_arg = args[0]
             if the_arg is None:
-                raise TypeError(none_error)
+                raise TypeError(self._NONE_MSG)
             # suppose it's a pair and try to unpack it
             try:
                 x, y = the_arg
@@ -328,9 +327,10 @@ class GridIndex:
                 x, y = the_arg, NONE_SLICE
         elif length == 2:
             if None in args:
-                raise TypeError(none_error)
+                raise TypeError(self._NONE_MSG)
             x, y = args
         else:
+            cls = typename(self)
             raise ValueError(
                 f"Cannot create a {cls} with more than 2 arguments"
             )

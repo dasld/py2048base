@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 
 class Grid(SquareGameGrid):
-    CELLCLASS: Type = Cell
+    CELLCLASS = Cell
     # how many Cells start non-zero
     STARTING_AMOUNT = 2
     # what values can be seeded in each Cell; tuple instead of set because
@@ -182,12 +182,11 @@ class Grid(SquareGameGrid):
         new.store_snapshot()
         return new
 
-    def undo(self, ignore_empty: bool = True) -> None:
-        """Restore the game to its previous state.
+    def undo(self, ignore_empty: bool = True) -> bool:
+        """Try to restore the game to its previous state.
 
         :param bool ignore_empty: whether to ignore a lack of snapshots
-        :raises IndexError: if there are less than 2 snapshots (one for the
-            current state, one for the previous one
+        :return: whether undoing occurred
         """
 
         if len(self.history) >= 2:
@@ -201,9 +200,10 @@ class Grid(SquareGameGrid):
                 raise IndexError(
                     "cannot undo last movement: too few snapshots available"
                 )
-            return
+            return False
         self.update_with_snapshot(past)
         self.store_snapshot(past)
+        return True
 
     @property
     def largest(self) -> int:
