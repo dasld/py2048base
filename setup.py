@@ -4,21 +4,21 @@
 
 import setuptools
 
-from py2048 import APPNAME, TESTING, VERSION
+from py2048 import _TESTING, APPNAME, VERSION
 
 
-def read(name: str) -> None:
-    with open(name, "r", encoding="utf-8") as readme:
-        return readme.read()
+def readme() -> str:
+    with open("README.rst", "r", encoding="utf-8") as rst:
+        return rst.read()
 
 
 setuptools.setup(
-    name=f"{APPNAME}-danieldiniz" if TESTING else f"{APPNAME}base",
+    name=f"{APPNAME}-danieldiniz" if _TESTING else f"{APPNAME}base",
     version=VERSION,
     author="Daniel Diniz",
     author_email="daniel_asl_diniz@protonmail.com",
     description="Python clone of the famous 2048 game.",
-    long_description=read("README.rst"),
+    long_description=readme(),
     long_description_content_type="text/x-rst",
     url="https://github.com/dasld/py2048base",
     classifiers=[
@@ -28,7 +28,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.8",
         "Topic :: Games/Entertainment :: Puzzle Games",
     ],
-    install_requires=["appdirs>=1", "more-itertools>=8",],  # alphabetical order
+    install_requires=["appdirs>=1"],
     packages=[APPNAME],
     python_requires=">=3.8",
     license="GPL",

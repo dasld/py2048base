@@ -5,87 +5,135 @@ py2048
 .. image:: https://img.shields.io/github/license/dasld/py2048base?color=blue&style=flat-square   :alt: GitHub
 .. image:: https://img.shields.io/pypi/v/py2048base?color=green&style=flat-square   :alt: PyPI
 
-**py2048** is a clone of the famous game
-`2048 <https://play2048.co/>`_,
-by
-`Gabriele Cirulli <http://gabrielecirulli.com/>`_.
+**py2048** is a clone of the famous game_ by `Gabriele Cirulli`__.
 It's probably not very interesting to people looking for playing 2048, but may
-be useful for people looking for learning Python (and some popular Python
-packages, such as `PyQt`).
-Written in Python 3.8 (and nothing more), the package is divided in 2 parts:
-the backend and the frontend (or interface).
+be useful for people looking for learning Python.
+It's written in pure Python 3.8 and makes an effort not to use third-party libraries.
+For example, the game grid could be a numpy matrix, but I'd rather not break a butterfly
+upon a wheel.
+The game's been divided in two parts:
+the backend, and the frontends (or interfaces).
 
-This package provides no concrete user interface for the game, but contains a
-class that must be inherited by every actual frontend (more details below).
+The package in this repository provides no concrete user interface for the game,
+but contains a class that must be inherited by every actual frontend.
 
 
 ********
 Features
 ********
 
-* Customizable rules: you can configure the size of the game grid and the
-  winning condition (wanna go beyond 2048?);
-* Customizable looks: by subclassing the basic frontend and overriding its
-  methods, you can make the game look any way you want, without touching the
-  basic game logic;
-* Automatic mode: you can replace human input with a function that picks a
-  random direction! More useful for testing than actual gameplay, though.
+* Customizable rules
+      You can configure the size of the game grid and the winning condition
+      (wanna go beyond 2048?);
+* Customizable looks
+      By subclassing the basic frontend and overriding its
+      methods, you can make the game look any way you want, without touching the
+      basic game logic;
+* Automatic mode
+      You can replace human input with a function that picks a
+      random direction! More useful for testing than actual gameplay, though.
 
 
 **********
 How to use
 **********
 
-Subclass `py2048.basefrontend.Base2048Frontend` and override the following
-methods:
+To implement a frontend
+=======================
+
+The backend takes input (in the form of a `py2048.Directions` object),
+processes it, and waits for the next input.
+This loops until
+the player exits, or
+the player wins for the first time in this session, or
+the player runs out of valid movements.
+It's a pure-Python implementation of the original game logic:
+it makes equal numbers merge into their sum, "moving" from one tile into
+another, and so on.
+The backend deals only with plain Python data, such as `int` and `dict`;
+it is up to each frontend to actually collect the input and display the
+updated game state as a (hopefully) pretty interface.
+
+To write such frontend, subclass `py2048.basefrontend.Base2048Frontend`
+and override the following methods:
 
 * `choose_direction`
-* `player_quit`
-* `player_victory`
-* `player_loss`
+* `on_player_quit`
+* `on_player_victory`
+* `on_player_overvictory`
+* `on_player_loss`
 
 `choose_direction` must return exactly one `py2048.Directions` object.
-The other methods shouldn't return anything.
+If writing a graphical frontend (a GUI), you'll probably want to create a "worker"
+thread that runs the backend's loop and waits for a condition when it reaches
+the `choose_direction` call.
+The main thread will then be responsible for storing user input somewhere accessible
+by the worker thread and "waking it up".
+The other overriden methods shouldn't return anything.
 `player_quit` is called when the player exits the game before winning or
 losing.
+An "overvictory" is what happens when the grid "jams" (runs out of valid movements)
+but the player had already reached the target number.
+
+To run tests
+============
+
+We're using the `unittest` native Python library to check the correctness of the
+basic game structures.
+To run the tests, open a terminal, move into the root folder of the project
+(the one which contains `setup.py`), and type the following:
+
+    python3 -m py2048.tests
+
+Make sure you're in the right folder,
+that there are no slashes in the command, and
+that it doesn't end with *.py*.
+Alternatively, use
+
+    make test
 
 
+********
 Wishlist
-========
+********
 
 In the future, I'd like to create an AI to play the game!
 
 
+------------
+
+************
+How it works
+************
+
 Backend
 =======
 
-The backend is a pure-Python implementation of the original game logic;
-it explains how equal numbers merge into their sum, "moving" from one tile into
-another, and so on.
-The main components are the `Cell` and the `Grid`.
-
+Its main components are the `Cell` and the `Grid`.
 The `Cell` class is a wrapper over an `int` that represents a tile in the game
 grid.
 It has a `locked` property, which is simply a `bool` that determines whether it
-can change its stored `int`.
-This prevents, for example, a 2 merging into a 2 and the resulting 4 merging
-into another 4 all in a single game-turn.
+can change its stored `int` in this cycle.
+A cycle is what happens between the arrival of a valid user input and the moment
+the game pauses to get the next input.
+This `locked` property prevents a 2 merging into a 2 and the resulting 4 merging
+into another 4 all in a single cycle, for example.
+If you play the original game, you'll notice that is not allowed.
 
 The `Grid` is wrapper over a `dict` that maps points into `Cells`
 (and points are named tuples that store x and y coordinates).
-This class implements much of the game logic, such as determining how and when
-one `Cell` can merge into another.
+This class (along with `py2048.basefrontend.Base2048Frontend`), implements most
+of the game logic.
+It's responsible for determining how and when one `Cell` can merge into another,
+updating the score, and so on.
 
 
 Frontend
 ========
 
-The backend deals only with plain Python data, such as `int` and `dict`;
-it is up to each frontend to actually collect user input and respond by
-displaying the game data as a (hopefully) pretty interface.
-Each frontend is a Python class that inherits from `Base2048Frontend`, the only
-frontend-related implementation in this package.
-This base class contains the main game loop that runs until a tile numbered
-with the winning condition has formed or the player has no valid movements
-available.
 
+
+
+.. _game: https://play2048.co/
+.. _cirulli: http://gabrielecirulli.com
+__ cirulli_

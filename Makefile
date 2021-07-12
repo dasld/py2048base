@@ -2,11 +2,15 @@
 # https://stackoverflow.com/a/14109796
 
 
-.PHONY: format push build upload clean
+.PHONY: test push upload format clean
 
 
 build:
 	python3 -m build --no-isolation
+
+
+test:
+	python3 -m py2048.tests
 
 
 push:

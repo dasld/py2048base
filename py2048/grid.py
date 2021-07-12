@@ -40,13 +40,13 @@ from py2048 import (
     ExpectationError,
     NegativeIntegerError,
     Point,
+    Snapshot,
+    classname,
 )
 from py2048.cell import Cell
 
+
 logger = logging.getLogger(__name__)
-
-
-Snapshot = Mapping[Point, int]
 
 
 class Grid(SquareGameGrid):
@@ -96,6 +96,12 @@ class Grid(SquareGameGrid):
                 f"{side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
+        self.vectors = {
+            Directions.LEFT: self.columns(),
+            Directions.RIGHT: self.columns(reverse=True),
+            Directions.UP: self.rows(),
+            Directions.DOWN: self.rows(reverse=True),
+        }
         # the grid starts empty, so every Cell starts in the `empty_cells` set
         self.empty_cells: Set[Cell] = set(self.cells())
         self.history: List[Snapshot] = []
@@ -129,14 +135,12 @@ class Grid(SquareGameGrid):
         self.history.clear()
         self.check_integrity()
 
-    def snapshot(self) -> Snapshot:
-        return {point: cell.number for point, cell in self.items()}
-
     def store_snapshot(self) -> None:
         """Store the current game state in `history`.
         """
 
-        self.history.append(self.snapshot())
+        snapshot = {point: cell.number for point, cell in self.items()}
+        self.history.append(snapshot)
 
     def update_with_snapshot(self, snapshot: Snapshot) -> None:
         """Replace each Cell number with the corresponding `snapshot` value.
@@ -158,7 +162,7 @@ class Grid(SquareGameGrid):
         sqrt = len(snapshot) ** 0.5  # a float
         side = int(sqrt)
         if side != sqrt:
-            name = cls.__name__
+            name = classname(cls)
             raise ValueError(f"Cannot create {name} from a non-square mapping")
         new = cls(side)
         new.update_with_snapshot(snapshot)
@@ -230,7 +234,7 @@ class Grid(SquareGameGrid):
 
         logger.debug(
             "Available cells for seeding: %s.",
-            "  ".join(sorted(map(repr, self.empty_cells))),
+            "  ".join(map(repr, sorted(self.empty_cells))),
         )
         changed: List[Cell] = []
         for cell in random.sample(self.empty_cells, amount):
@@ -317,7 +321,8 @@ class Grid(SquareGameGrid):
         # we can't use `cell.number * 2` or `pivot.number * 2` because
         # the numbers differ when a positive Cell moves into a 0 one
         new_number = cell.number + pivot.number
-        # increase the score only if the Cell moved to a positive pivot
+        # in the original game the score only increases when a Cell moves into
+        # a positive pivot
         if pivot:
             pivot.lock()  # prevent further movement this cycle
             self.score += new_number
@@ -337,21 +342,17 @@ class Grid(SquareGameGrid):
         :return: whether the game state changed
         """
 
-        if to == Directions.LEFT:
-            vectors = tuple(self.columns)
-        elif to == Directions.RIGHT:
-            vectors = tuple(self.columns)[::-1]
-        elif to == Directions.UP:
-            vectors = tuple(self.rows)
-        elif to == Directions.DOWN:
-            vectors = tuple(self.rows)[::-1]
-        elif isinstance(to, Directions):
-            # very bad
-            raise ValueError(f"'to' must be {Directions.pretty()}, not {to!r}")
-        else:
-            # EVEN WORSE
-            raise ExpectationError(to, Directions)
-        #
+        try:
+            vectors = self.vectors[to]
+        except KeyError:
+            if isinstance(to, Directions):
+                # very bad
+                raise ValueError(
+                    f"'to' must be {Directions.pretty()}, not {to!r}"
+                )
+            else:
+                # EVEN WORSE
+                raise ExpectationError(to, Directions)
         self.attempt += 1
         logger.debug("Attempt increased to %d.", self.attempt)
         something_moved = False
