@@ -48,13 +48,19 @@ from typing import (
 
 import appdirs  # https://pypi.org/project/appdirs
 
-from py2048.constants import EMPTY_TUPLE, NONE_SLICE, EllipsisType, Expectation
+from py2048.constants import (
+    EMPTY_TUPLE,
+    NONE_SLICE,
+    EllipsisType,
+    Expectation,
+    IntPair,
+)
 
 # CONSTANTS specific to this package
 # _TESTING is used only in setup.py
 _TESTING = False
 
-__version__ = (0, 37)
+__version__ = (0, 38)
 APPNAME = __name__
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 VERSION = ".".join(map(str, __version__))
@@ -218,8 +224,8 @@ class ExpectationError(Base2048Error, TypeError):
 
 
 # other classes
-class Point(namedtuple("Point", "x y")):
-    """Namedtuple that stores a pair of non-negative integers.
+class Point(namedtuple("_Point", "x y")):
+    """Namedtuple containing a pair of non-negative integers.
     """
 
     # `__slots__`is "a declaration inside a class that saves memory by
@@ -235,6 +241,16 @@ class Point(namedtuple("Point", "x y")):
         check_int(y)
         self = super(Point, cls).__new__(cls, x, y)
         return self
+
+    def __add__(self, other: IntPair) -> IntPair:
+        """>>> Point(x=3, y=2) + (-1, 0)
+               (2, 2)
+        """
+
+        try:
+            return (self.x + other[0], self.y + other[1])
+        except (TypeError, ValueError, IndexError, KeyError):
+            return NotImplemented
 
     def __str__(self) -> str:
         return f"<{self.x},{self.y}>"

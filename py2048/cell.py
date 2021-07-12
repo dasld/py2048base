@@ -92,7 +92,7 @@ class Cell:
     unlock = partialmethod(_set_lock, False)
 
     def __repr__(self) -> str:
-        return f"Cell<{self.x},{self.y}>({self.number})"
+        return f"Cell({self.x}, {self.y}, {self.number})"
 
     def __str__(self) -> str:
         return str(self.number)

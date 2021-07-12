@@ -22,11 +22,12 @@ package. Most are just for type-hinting and type annotations.
 """
 
 import enum
-from typing import TYPE_CHECKING, Sequence, Type, Union
+from typing import TYPE_CHECKING, Sequence, Tuple, Type, Union
 
 
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
 ModuleType = type(enum)  # just for annotation purposes
+IntPair = Tuple[int, int]
 Vector = Sequence[int]
 Expectation = Union[Type, Sequence[Type]]
 

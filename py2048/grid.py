@@ -26,6 +26,7 @@ import random
 import sys
 from itertools import chain
 from typing import (
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -38,6 +39,7 @@ from py2048 import (
     SquareGameGrid,
     Directions,
     ExpectationError,
+    Line,
     NegativeIntegerError,
     Point,
     Snapshot,
@@ -62,6 +64,12 @@ class Grid(SquareGameGrid):
     # no power of 2 higher than CEILING will be accepted as the game's goal
     # sys.maxsize == (2**63)-1 on 64bits machines
     CEILING = sys.maxsize
+    SHIFTS = {
+        Directions.LEFT: (-1, 0),
+        Directions.RIGHT: (1, 0),
+        Directions.DOWN: (0, 1),
+        Directions.UP: (0, -1),
+    }
 
     cells = SquareGameGrid.values
 
@@ -96,11 +104,11 @@ class Grid(SquareGameGrid):
                 f"{side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
-        self.vectors = {
-            Directions.LEFT: self.columns(),
-            Directions.RIGHT: self.columns(reverse=True),
-            Directions.UP: self.rows(),
-            Directions.DOWN: self.rows(reverse=True),
+        self._vectors_getters = {
+            Directions.LEFT: (self.columns, False),
+            Directions.RIGHT: (self.columns, True),
+            Directions.UP: (self.rows, False),
+            Directions.DOWN: (self.rows, True),
         }
         # the grid starts empty, so every Cell starts in the `empty_cells` set
         self.empty_cells: Set[Cell] = set(self.cells())
@@ -259,15 +267,7 @@ class Grid(SquareGameGrid):
         of the board, for example).
         """
 
-        x, y = cell.point
-        if to == Directions.LEFT:
-            x -= 1
-        elif to == Directions.RIGHT:
-            x += 1
-        elif to == Directions.DOWN:
-            y += 1
-        elif to == Directions.UP:
-            y -= 1
+        x, y = cell.point + self.SHIFTS[to]
         try:
             next_point = Point(x, y)  # NegativeIntegerError
             next_cell = self[next_point]  # KeyError
@@ -330,20 +330,12 @@ class Grid(SquareGameGrid):
         self.set_cell(pivot, new_number)
         return True
 
-    def drag(self, to: Directions) -> bool:
-        """Try to move every cell towards `to`, starting with the vectors
-        closest to the origin.
-
-        Increment the attempt counter, then try to move every cell in the
-        given direction, starting with the vectors closest to the origin.
-        If that changed anything, increment the cycle counter by 1 and seed
-        itself by 1.
-
-        :return: whether the game state changed
+    def _vectors_from_Directions(self, to: Directions) -> Iterator[Line]:
+        """Return each row or column, from closest to farthest from `to`.
         """
 
         try:
-            vectors = self.vectors[to]
+            method, reverse_boolean = self._vectors_getters[to]
         except KeyError:
             if isinstance(to, Directions):
                 # very bad
@@ -353,6 +345,21 @@ class Grid(SquareGameGrid):
             else:
                 # EVEN WORSE
                 raise ExpectationError(to, Directions)
+        return method(reverse=reverse_boolean)
+
+    def drag(self, to: Directions) -> bool:
+        """Try to move every cell towards `to`, starting with the vectors
+        closest to the origin.
+
+        Increment the attempt counter, then try to move every Cell in the
+        given direction, starting with the vectors closest to the origin.
+        If that changed anything, increment the cycle counter by 1 and seed
+        itself by 1.
+
+        :return: whether the game state changed
+        """
+
+        vectors = self._vectors_from_Directions(to)
         self.attempt += 1
         logger.debug("Attempt increased to %d.", self.attempt)
         something_moved = False
