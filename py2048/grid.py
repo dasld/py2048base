@@ -53,14 +53,16 @@ logger = logging.getLogger(__name__)
 
 class Grid(SquareGameGrid):
     CELLCLASS: Type = Cell
-    # how many cells start non-zero
+    # how many Cells start non-zero
     STARTING_AMOUNT = 2
-    # what values can be seeded in each cell; tuple instead of set because
+    # what values can be seeded in each Cell; tuple instead of set because
     # random.choice doesn't work with sets
     SEEDING_VALUES = (2, 4)
     # the `is2048like` method will use this list to validate a goal
     # 2**11 == 2048
     NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
+    # _AUTO_NUMBERS is used to autofill the grid (for testing and debugging)
+    _AUTO_NUMBERS = NUMBERS[:-1]
     # no power of 2 higher than CEILING will be accepted as the game's goal
     # sys.maxsize == (2**63)-1 on 64bits machines
     CEILING = sys.maxsize
@@ -184,15 +186,17 @@ class Grid(SquareGameGrid):
             current state, one for the previous one
         """
 
-        try:
+        if len(self.history) >= 2:
             # the last snapshot is the current state, so we forget it
             del self.history[-1]
             # now the last snapshot is the previous state, so we retrieve and
             # forget it
             snap = self.history.pop()
-        except IndexError:
+        else:
             if not ignore_empty:
-                raise
+                raise IndexError(
+                    "cannot undo last movement: too few snapshots available"
+                )
             return
         self.update_with_snapshot(snap)
         self.store_snapshot()
@@ -206,8 +210,9 @@ class Grid(SquareGameGrid):
         """Return whether every Cell is empty (ie, 0-numbered).
         """
 
-        assert len(self.empty_cells) <= len(self)
-        return len(self.empty_cells) == len(self)
+        empties, cells = len(self.empty_cells), len(self)
+        assert empties <= cells
+        return empties == cells
 
     def set_cell(self, cell: Cell, number: int) -> None:
         """Assign `number` to `Cell` and update `empty_cells`.
@@ -348,7 +353,7 @@ class Grid(SquareGameGrid):
         return method(reverse=reverse_boolean)
 
     def drag(self, to: Directions) -> bool:
-        """Try to move every cell towards `to`, starting with the vectors
+        """Try to move every Cell towards `to`, starting with the vectors
         closest to the origin.
 
         Increment the attempt counter, then try to move every Cell in the
@@ -403,16 +408,16 @@ class Grid(SquareGameGrid):
         return True
 
     def _autofill(self) -> None:
-        numbers = self.NUMBERS[:-1]
         for cell in self.cells():
             cell.unlock()
-            self.set_cell(cell, random.choice(numbers))
+            self.set_cell(cell, random.choice(self._AUTO_NUMBERS))
 
     def autofill(self, no_jamming: bool = True) -> None:
-        """Give each cell a random number.
+        """Give each Cell a random number.
 
         Store a snapshot afterwards. The numbers are always greater than 0 and
         smaller than 2048.
+        Also, unlock every Cell.
 
         :param bool no_jamming: if the result cannot be a jammed grid
         """
