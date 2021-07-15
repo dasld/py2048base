@@ -21,8 +21,9 @@ import random
 from abc import ABC, abstractmethod
 from typing import Any, final, Optional
 
-from py2048 import Base2048Error, Directions, type_check
+from py2048 import Directions
 from py2048.grid import Grid
+from py2048.utils import Base2048Error, type_check
 
 
 class Base2048Frontend(ABC):

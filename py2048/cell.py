@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Declares the `Cell` class.
+"""
+
 from functools import partialmethod
 from typing import Sequence
 
-from py2048 import check_int, Point, type_check
+from py2048 import Point
+from py2048.utils import check_int, type_check
 
 
 class Cell:

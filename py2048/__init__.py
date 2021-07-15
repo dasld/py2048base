@@ -21,25 +21,21 @@
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
-import inspect
 import pickle
 import sys
 from abc import ABC
 from collections import namedtuple
-from collections.abc import Collection
 from enum import Enum
-from itertools import count
+from itertools import count, repeat
 from pathlib import Path
 from typing import (
-    Any,
     Callable,
     Dict,
     Hashable,
     Iterator,
-    List,
+    Literal,
     Mapping,
     Optional,
-    Sequence,
     Set,
     Tuple,
     Type,
@@ -48,22 +44,32 @@ from typing import (
 
 import appdirs  # https://pypi.org/project/appdirs
 
-from py2048.constants import (
-    EMPTY_TUPLE,
-    NONE_SLICE,
-    EllipsisType,
-    Expectation,
-    IntPair,
-)
-
 # CONSTANTS specific to this package
-# _TESTING is used only in setup.py
-_TESTING = False
-
-__version__ = (0, 41)
+# declaring them here, before importing utils, because
+# utils require them (avoiding circular importing errors)
+_TESTING = False  # used only in setup.py
+__version__ = (0, 42)
 APPNAME = __name__
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 VERSION = ".".join(map(str, __version__))
+
+from py2048.utils import (
+    EMPTY_TUPLE,
+    NONE_SLICE,
+    Base2048Error,
+    EllipsisType,
+    Expectation,
+    ExpectationError,
+    IntPair,
+    NegativeIntegerError,
+    check_int,
+    classname,
+    hexid,
+    is_container,
+    type_check,
+    typename,
+)
+
 
 __all__ = [
     # global variables
@@ -71,17 +77,6 @@ __all__ = [
     "APPNAME",
     "DATA_DIR",
     "VERSION",
-    # generic functions
-    "check_int",
-    "classname",
-    "hexid",
-    "iscontainer",
-    "type_check",
-    "typename",
-    # exceptions
-    "Base2048Error",
-    "ExpectationError",
-    "NegativeIntegerError",
     # generic classes
     "Directions",
     "GridIndex",
@@ -92,135 +87,6 @@ __all__ = [
     "BaseGameGrid",
     "SquareGameGrid",
 ]
-
-
-# GENERAL-PURPOSE FUNCTIONS
-def typename(thing: Any) -> str:
-    """Return the name of its argument's class.
-    """
-
-    return type(thing).__name__
-
-
-def classname(thing: Any) -> str:
-    """Return its argument's name, if it's a class,
-    or the name of its argument's class.
-    """
-
-    if inspect.isclass(thing):
-        return thing.__name__
-    return typename(thing)
-
-
-def hexid(thing: Any) -> str:
-    """Return the hexadecimal `id` of its argument as a string.
-    """
-
-    return hex(id(thing))
-
-
-def iscontainer(thing: Any) -> bool:
-    """Determine whether the argument is an iterable, but not a `str`.
-    """
-
-    cls = type(thing)
-    return issubclass(cls, Collection) and not issubclass(cls, str)
-
-
-def type_check(
-    value: Any, expected: Expectation, positive: bool = True
-) -> None:
-    """Verify whether `value` is of an appropriate type, or is not of a
-    forbidden one.
-
-    :param Any value: the object to check
-    :param Expectation expected: a class or a sequence of classes
-    :param bool positive: if `True`, raises `ExpectationError` if the type of
-        `value` is not listed in, or differs from, `expected`.
-        If `False`, raises the error if the type of `value` is listed in, or
-         equals, `expected`.
-    """
-
-    if iscontainer(expected):
-        match = type(value) in expected
-    else:
-        match = isinstance(value, expected)
-    if match != positive:
-        raise ExpectationError(value, expected, positive=positive)
-
-
-def check_int(i: int) -> None:
-    """Raise `ExpectationError` if `obj` is not `int`, and
-    `NegativeIntegerError` if it's a negative `int`.
-    """
-
-    type_check(i, int)
-    if i < 0:
-        raise NegativeIntegerError(i)
-
-
-# CLASSES
-# Exceptions
-class Base2048Error(Exception):
-    pass
-
-
-class NegativeIntegerError(Base2048Error, ValueError):
-    """Raised when a negative `int` is found when a positive one or 0 was
-    required.
-    """
-
-    std_message = f"Only non-negative integers can be used in a {APPNAME} grid"
-
-    def __init__(self, number: int, message: str = "") -> None:
-        self.number = number
-        self.message = f"{message}. " if message else ""
-        super().__init__(message)
-
-    def __str__(self) -> str:
-        return f"{self.message}{self.std_message}; but {self.number} found"
-
-
-class ExpectationError(Base2048Error, TypeError):
-    """Raised when the type of an argument is incorrect.
-
-    Just like `TypeError`, but more verbose.
-    """
-
-    def __init__(
-        self,
-        problem: Any,
-        expectation: Expectation,
-        *args: str,
-        positive: bool = True,
-    ) -> None:
-        if iscontainer(expectation):
-            self.expectation = "/".join(map(classname, expectation))
-        else:
-            self.expectation = classname(expectation)
-        self.positive = positive
-        self.problem = repr(problem)
-        self.problem_type = typename(problem)
-        if args:
-            self.message = "".join(args).rstrip() + ". "
-        else:
-            self.message = ""
-        super().__init__(*args)
-
-    def __str__(self) -> str:
-        if self.positive:
-            msg = (
-                f"{self.message}Expected {self.expectation}, "
-                f"but {self.problem} is {self.problem_type}"
-            )
-        else:
-            msg = (
-                f"{self.message}Found {self.problem} of "
-                f"type {self.problem_type}, but "
-                "the following class(es) is/are "
-                f"not allowed: {self.expectation}"
-            )
-        return msg
 
 
 # other classes
@@ -234,7 +100,7 @@ class Point(namedtuple("_Point", "x y")):
     # https://docs.python.org/3/glossary.html#__slots__
     __slots__ = ()
 
-    def __new__(cls, x: int, y: int) -> None:
+    def __new__(cls, x: int, y: int) -> Point:
         # using __new__ instead of __init__ because tuples are immutable
         # https://stackoverflow.com/a/3624799
         check_int(x)
@@ -248,7 +114,7 @@ class Point(namedtuple("_Point", "x y")):
         """
 
         try:
-            return (self.x + other[0], self.y + other[1])
+            return self.x + other[0], self.y + other[1]
         except (TypeError, ValueError, IndexError, KeyError):
             return NotImplemented
 
@@ -256,7 +122,7 @@ class Point(namedtuple("_Point", "x y")):
         return f"<{self.x},{self.y}>"
 
 
-Line = Tuple[Point]
+Line = Tuple[Point, ...]
 Snapshot = Mapping[Point, int]
 
 
@@ -309,10 +175,10 @@ class GridIndex:
     """
 
     SingletonType = Union[int, slice, EllipsisType]
-    Type = Union[SingletonType, Tuple[SingletonType]]
+    Type = Union[SingletonType, Tuple[SingletonType, SingletonType]]
     _NONE_MSG = "Cannot make a GridIndex from None"
 
-    def __init__(self, *args: Sequence[SingletonType]) -> None:
+    def __init__(self, *args: Type) -> None:
         length = len(args)
         if not length:
             x = y = NONE_SLICE
@@ -374,8 +240,11 @@ class BaseGameGrid(ABC):
 
     `CELLCLASS` is `None`, which means that it must be overridden
     when subclassing this class.
+    `CELLCONSTRUCTOR`, if overridden, must be a function that either takes as
+    single argument a `Point`, or no argument, and returns an instance of
+    `CELLCLASS`. If not overridden, it defaults to `CELLCLASS.__init__`.
     The class can abstract any table with orthogonally aligned square cells,
-    such as the chess and checkers boards, sudoku grids, and so on.
+    such as chess and checkers boards, sudoku grids, and so on.
     While the cells must be squares, the table itself can be a rectangle.
     The class provides basic functionality such as iterating over its rows and
     columns and can be indexed by a `GridIndex`, as explained in the docstring
@@ -383,10 +252,11 @@ class BaseGameGrid(ABC):
     """
 
     CELLCLASS: Type = None
+    CELLCONSTRUCTOR: Optional[Callable] = None
 
     def __init__(self, width: int, height: int) -> None:
-        cls = self.CELLCLASS
-        if cls is None:
+        cellclass = self.CELLCLASS
+        if cellclass is None:
             raise NotImplementedError(
                 "CELLCLASS must be overridden when subclassing BaseGameGrid"
             )
@@ -396,29 +266,18 @@ class BaseGameGrid(ABC):
             raise ValueError(
                 "'width' and 'height' must be both greater than or equal to 2"
             )
-        self.mapping: Dict[Point, cls] = {}
+        self.mapping: Dict[Point, cellclass] = {}
+        constructor = self.CELLCONSTRUCTOR or cellclass
         for x in range(width):
             for y in range(height):
                 point = Point(x, y)
                 try:
-                    self.mapping[point] = cls(point)
+                    self.mapping[point] = constructor(point)
                 except TypeError:
-                    self.mapping[point] = cls()
+                    self.mapping[point] = constructor()
+        self.check_integrity()
 
-    def keys(self) -> Iterator[Point]:
-        # sorted returns a list
-        return iter(sorted(self.mapping.keys()))
-
-    def values(self) -> Iterator[CELLCLASS]:
-        return (self.mapping[k] for k in self.keys())
-
-    def items(self) -> Iterator[Tuple[Point, CELLCLASS]]:
-        return ((k, self.mapping[k]) for k in self.keys())
-
-    # some synonyms
-    __iter__ = keys
-    points = keys
-
+    # -- "private" methods (except `repr` and `str`)
     def __len__(self) -> int:
         # this also provides __bool__
         return len(self.mapping)
@@ -436,17 +295,139 @@ class BaseGameGrid(ABC):
     def _distinct_ys(self) -> Set[int]:
         return set(point.y for point in self.mapping.keys())
 
-    def x_axis(self, reverse: bool = False) -> Iterator[int]:
+    def _axisX(self, reverse: bool = False) -> Iterator[int]:
         """Yield each x number in ascending or descending order.
         """
 
         return iter(sorted(self._distinct_xs, reverse=reverse))
 
-    def y_axis(self, reverse: bool = False) -> Iterator[int]:
+    def _axisY(self, reverse: bool = False) -> Iterator[int]:
         """Yield each y number in ascending or descending order.
         """
 
         return iter(sorted(self._distinct_ys, reverse=reverse))
+
+    @staticmethod
+    def _slice2range(s: slice) -> range:
+        """'Cast' a `slice` into a `range`.
+
+        Needed because ranges allow containment tests, but slices don't.
+        3 in range(4) -> True
+        3 in slice(4) -> TypeError
+        """
+
+        # https://docs.python.org/3.8/library/functions.html#slice
+        # `start` and `step` are optional in slice creation, but they default
+        # to `None`, which is why we provide integer defaults
+        # it's better to explicitly check for `None` instead of checking any
+        # falsy value; based on:
+        # https://github.com/more-itertools/more-itertools/blob/76f51e4f11c9ff99ed080ca536fbd4735bbfae3f/more_itertools/more.py#L361
+        start = 0 if (s.start is None) else s.start
+        stop = sys.maxsize if (s.stop is None) else s.stop
+        step = 1 if (s.step is None) else s.step
+        return range(start, stop, step)
+
+    def _select_keys(self, key: GridIndex.Type) -> Line:
+        """Yield each Point that matches `key`.
+        """
+
+        x, y = GridIndex(key)
+        restrictions: Set[Callable[[Point], bool]] = set()
+        # restricting the X-axis
+        if isinstance(x, int):
+            restrictions.add(lambda testing: testing.x == x)
+        elif isinstance(x, slice) and x != NONE_SLICE:
+            x_range = self._slice2range(x)
+            restrictions.add(lambda testing: testing.x in x_range)
+        # restricting the Y-axis
+        if isinstance(y, int):
+            restrictions.add(lambda testing: testing.y == y)
+        elif isinstance(y, slice) and y != NONE_SLICE:
+            y_range = self._slice2range(y)
+            restrictions.add(lambda testing: testing.y in y_range)
+        # yielding only what fits the restrictions
+        for point in self:
+            for restr in restrictions:
+                # a break in a for-loop skips its else-clause
+                if not restr(point):
+                    # the first restriction that doesn't apply is enough to
+                    # discard this key
+                    break
+            else:
+                yield point
+
+    def __getitem__(self, key: GridIndex.Type) -> Union[Point, Line]:
+        """Return either one Point or a tuple of Points.
+        """
+
+        if isinstance(key, Point):
+            # no need for further complications when getting a single Point
+            # we don't use `dict.get` here because another function might want
+            # to catch the `KeyError`
+            return self.mapping[key]
+        selecteds = tuple(self.mapping[sel] for sel in self._select_keys(key))
+        if not selecteds:
+            raise KeyError(str(key))
+        if len(selecteds) == 1:
+            return selecteds[0]
+        return selecteds
+
+    def _set_point(self, key: Point, value: CELLCLASS) -> None:
+        """Assign a value to one Point.
+
+        This method exists to be overridden by subclasses, if necessary.
+        """
+
+        type_check(value, self.CELLCLASS)
+        self.mapping[key] = value
+
+    def _set_xy(self, x: int, y: int, value: CELLCLASS) -> None:
+        self._set_point(Point(x, y), value)
+
+    def __setitem__(
+        self, key: GridIndex.Type, value: Union[int, CELLCLASS]
+    ) -> None:
+        if isinstance(key, Point):
+            # no need for further complications when setting a single Point
+            self._set_point(key, value)
+            return
+        selecteds = tuple(self._select_keys(key))
+        if not selecteds:
+            raise KeyError(str(key))
+        if not is_container(value):
+            value = repeat(value)
+        elif len(value) != len(selecteds):
+            raise ValueError(
+                "Bad amount of values to unpack: "
+                f"expected {len(selecteds)}, got {len(value)}"
+            )
+        for point, point_value in zip(selecteds, value):
+            self._set_point(point, point_value)
+        self.check_integrity()
+
+    # -- "public" methods
+    def keys(self, by: Literal["row", "column"] = "row") -> Iterator[Point]:
+        by = by.lower()
+        # sorted returns a list
+        if by == "row":
+            return iter(sorted(self.mapping.keys(), key=lambda point: point.y))
+        if by == "column":
+            return iter(sorted(self.mapping.keys()))
+        raise ValueError(f"'by' must be 'row' or 'column', not {by!r}")
+
+    def values(
+        self, by: Literal["row", "column"] = "row"
+    ) -> Iterator[CELLCLASS]:
+        return (self.mapping[k] for k in self.keys(by=by))
+
+    def items(
+        self, by: Literal["row", "column"] = "row"
+    ) -> Iterator[Tuple[Point, CELLCLASS]]:
+        return ((k, self.mapping[k]) for k in self.keys(by=by))
+
+    # some synonyms
+    __iter__ = keys
+    points = keys
 
     @property
     def width(self) -> int:
@@ -457,10 +438,10 @@ class BaseGameGrid(ABC):
         return len(self._distinct_ys)
 
     def columns(self, reverse: bool = False) -> Iterator[Line]:
-        return (self[x] for x in self.x_axis(reverse=reverse))
+        return (self[x] for x in self._axisX(reverse=reverse))
 
     def rows(self, reverse: bool = False) -> Iterator[Line]:
-        return (self[..., y] for y in self.y_axis(reverse=reverse))
+        return (self[..., y] for y in self._axisY(reverse=reverse))
 
     def check_integrity(self) -> None:
         """Ensure the grid's dimensions and indexes are correct.
@@ -476,8 +457,12 @@ class BaseGameGrid(ABC):
         `self.width * self.height`.
         """
 
+        self_len = len(self)
+        if not self_len:  # you can't have a problem if you have nothing :)
+            return
+        width, height = self.width, self.height
         # check columns
-        for actual, target in zip(self.x_axis(), count()):
+        for actual, target in zip(self._axisX(), count()):
             assert (
                 actual == target
             ), f"Bad column index {actual}; must be {target}"
@@ -487,8 +472,14 @@ class BaseGameGrid(ABC):
             f"Shortest column has length {short_len}, "
             f"but the longest has length {long_len}"
         )
+        # 4 columns means 0..3, 9 columns means 0..8, etc.
+        max_distinct_xs = max(self._distinct_xs)
+        assert max_distinct_xs == (width - 1), (
+            f"Width of {self!r} is {width}, but "
+            f"there are {max_distinct_xs} X values"
+        )
         # check rows
-        for actual, target in zip(self.y_axis(), count()):
+        for actual, target in zip(self._axisY(), count()):
             assert actual == target, f"Bad row index {actual}; must be {target}"
         short_len = len(min(tuple(self.rows()), default=EMPTY_TUPLE))
         long_len = len(max(tuple(self.rows()), default=EMPTY_TUPLE))
@@ -496,15 +487,19 @@ class BaseGameGrid(ABC):
             f"Shortest row has length {short_len}, "
             f"but the longest has length {long_len}"
         )
+        max_distinct_ys = max(self._distinct_ys)
+        assert max_distinct_ys == (height - 1), (
+            f"Height of {self!r} is {height}, but "
+            f"there are {max_distinct_ys} Y values"
+        )
         # type check
         for value in self.values():
             type_check(value, self.CELLCLASS)
         # total size check
-        self_len = len(self)
-        height_width = self.height * self.width
-        assert self_len == height_width, (
+        width_height = width * height
+        assert self_len == width_height, (
             f"{self!r} has {self_len} items, but "
-            f"self.height * self.width == {height_width}"
+            f"self.height * self.width == {width_height}"
         )
 
     def pickle(self, path) -> None:
@@ -520,104 +515,13 @@ class BaseGameGrid(ABC):
             if not ignore_missing:
                 raise
 
-    @staticmethod
-    def _slice2range(s: slice) -> range:
-        # https://docs.python.org/3.8/library/functions.html#slice
-        # slice objects have read-only data attributes start, stop and step
-        # which merely return the argument values (or their default)
-        start = s.start or 0
-        stop = s.stop or sys.maxsize
-        step = s.step or 1
-        return range(start, stop, step)
-
-    def select_keys(self, key: GridIndex.Type) -> Line:
-        """Return a tuple with all points that match `key`.
-        """
-
-        x, y = GridIndex(key)
-        restrictions: Set[Callable] = set()
-        # restricting the X-axis
-        if isinstance(x, int):
-            restrictions.add(lambda testing: testing.x == x)
-        elif isinstance(x, slice) and x != NONE_SLICE:
-            x_range = self._slice2range(x)
-            restrictions.add(lambda testing: testing.x in x_range)
-        # restricting the Y-axis
-        if isinstance(y, int):
-            restrictions.add(lambda testing: testing.y == y)
-        elif isinstance(y, slice) and y != NONE_SLICE:
-            y_range = self._slice2range(y)
-            restrictions.add(lambda testing: testing.y in y_range)
-        # assembling everything
-        selecteds: List[Point] = []
-        for point in self:
-            for rest in restrictions:
-                # a break in a for-loop skips its else-clause
-                if not rest(point):
-                    # the first restriction that doesn't apply is enough to
-                    # discard this key
-                    break
-            else:  # happens iff the for-clause didn't end with a break
-                selecteds.append(point)
-        return tuple(selecteds)
-
-    def __getitem__(self, key: GridIndex.Type) -> Union[Point, Line]:
-        """Return either one Point or a tuple of Points.
-        """
-
-        if isinstance(key, Point):
-            # no need for further complications when getting a single Point
-            # we don't use `dict.get` here because another function might want
-            # to catch the `KeyError`
-            return self.mapping[key]
-        selecteds = tuple(self.mapping[sel] for sel in self.select_keys(key))
-        if not selecteds:
-            raise KeyError(str(key))
-        if len(selecteds) == 1:
-            return selecteds[0]
-        return selecteds
-
-    def set_point(self, key: Point, value: CELLCLASS) -> None:
-        """Assign a value to one Point.
-
-        This method exists to be overridden by subclasses, if necessary.
-        """
-
-        type_check(value, self.CELLCLASS)
-        self.mapping[key] = value
-
-    def set_xy(self, x: int, y: int, value: CELLCLASS) -> None:
-        self.set_point(Point(x, y), value)
-
-    def __setitem__(
-        self, key: GridIndex.Type, value: Union[int, CELLCLASS]
-    ) -> None:
-        if isinstance(key, Point):
-            # no need for further complications when setting a single Point
-            self.set_point(key, value)
-            return
-        selecteds = self.select_keys(key)
-        if not selecteds:
-            raise KeyError(str(key))
-        points_amount = len(selecteds)
-        if not iscontainer(value):
-            value = [value] * points_amount
-        elif len(value) != points_amount:
-            raise ValueError(
-                "Bad amount of values to unpack: "
-                f"expected {points_amount}, got {len(value)}"
-            )
-        for point, point_value in zip(selecteds, value):
-            self.set_point(point, point_value)
-        self.check_integrity()
-
+    # -- `repr` and `str`
     def __repr__(self) -> str:
-        my_name, cell_name = classname(self), classname(self.CELLCLASS)
-        w, h = self.width, self.height
-        return f"{my_name}('{cell_name}', {w}x{h})"
+        my_name, cellclass = typename(self), typename(self.CELLCLASS)
+        return f"{my_name}({cellclass=}, {self.width=}, {self.height=})"
 
     def __str__(self) -> str:
-        return "\n".join(repr(r) for r in self.rows())
+        return "\n".join(repr(r).strip(")(") for r in self.rows())
 
 
 class SquareGameGrid(BaseGameGrid):

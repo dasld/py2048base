@@ -10,7 +10,7 @@ build:
 
 
 test:
-	python3 -m py2048.tests
+	pytest-3 py2048/test.py
 
 
 push:
@@ -27,7 +27,7 @@ format:
 
 
 clean:
-	rm -rf ./build/ ./dist/ ./py2048base.egg-info/ ./py2048/__pycache__/
+	rm -rf ./build/ ./dist/ ./py2048base.egg-info/
 	find . -type f -name *.pyc -delete
 	find . -type d -name __pycache__ -delete
 
