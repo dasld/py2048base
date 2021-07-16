@@ -1,9 +1,10 @@
-#!/usr/bin/env python3 -I
+#!/usr/bin/env -S python3 -I
 # -*- coding: utf-8 -*-
 #
 # check_version.py
 
-"""Whenever
+"""Prints the local py2048 version iff it's greater than the installed
+py2048 version.
 
 * IMPORTANT *
 Run this as:
@@ -32,7 +33,6 @@ def get_local_version():
 
 
 if __name__ == "__main__":
-    if get_local_version() <= global_version:
-        print("FAIL", end="")
-    else:
-        print("OK", end="")
+    local = get_local_version()
+    if local > global_version:
+        print(local, end="")

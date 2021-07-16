@@ -4,7 +4,7 @@
 .DELETE_ON_ERROR:
 .PHONY: test version push upload format clean
 PY = python3
-VERSION = $(shell $(PY) -I check_version.py)
+VERSION := $(shell $(PY) -I check_version.py)
 
 
 build:
@@ -15,26 +15,22 @@ test:
 	pytest-3 py2048/test.py
 
 
-version:
-	$(PY) -I check_version.py
-
-
 # do not indent (with tabs) Makefile directives such as ifeq
 # https://stackoverflow.com/a/21226973
 push:
-	$(info Pushing version $(VERSION))
-ifneq ($(VERSION),OK)
+ifeq ($(VERSION),)
 	$(error You haven't updated the version tuple!)
 else
+	$(info Pushing version $(VERSION))
 	git push -u origin main
 endif
 
 
 upload:
-	$(info Uploading version $(VERSION))
-ifneq ($(VERSION),OK)
+ifeq ($(VERSION),)
 	$(error You haven't updated the version tuple!)
 else
+	$(info Uploading version $(VERSION))
 	twine upload dist/*
 endif
 
