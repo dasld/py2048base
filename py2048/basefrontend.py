@@ -17,11 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Declares the Base2048Frontend class, that runs the game loop and
+updates the game grid according to the player input.
+"""
+
 import random
 from abc import ABC, abstractmethod
 from typing import Any, final, Optional
 
-from py2048 import Directions
+from py2048.core import Directions
 from py2048.grid import Grid
 from py2048.utils import Base2048Error, type_check
 
@@ -29,8 +33,8 @@ from py2048.utils import Base2048Error, type_check
 class Base2048Frontend(ABC):
     """Abstract class that implements the `play2048` method.
 
-    A concrete frontend should inherit from this class, but shouldn't override
-    this method.
+    A concrete frontend should inherit from this class, but shouldn't
+    override this method.
     Many other methods are 'hooks' that either can, should, or must be
     overridden.
     """
@@ -102,12 +106,12 @@ class Base2048Frontend(ABC):
     # MAIN LOOP: shouldn't be overridden
     @final
     def play2048(self) -> None:
-        """The main loop repeatedly calls `self.choice_function`. If that
-        raises `KeyboardInterrupt`, it returns immediately, skipping
-        `self.after_play()`. If that raises `EOFError`, it breaks the loop and
-        calls `self.after_play()`.
-        This loops until either a) the grid is jammed; or b) the player exits;
-        or c) the goal has been reached for the first time.
+        """The main loop repeatedly calls `self.choice_function`. If
+        that raises `KeyboardInterrupt`, it returns immediately,
+        skipping `self.after_play()`. If that raises `EOFError`, it
+        exits the loop and calls `self.after_play()`.
+        This loops until either a) the grid is jammed; or b) the player
+        exits; or c) the goal has been reached for the first time.
         """
 
         player_quit = False
@@ -144,12 +148,12 @@ class Base2048Frontend(ABC):
             else:
                 self.after_nochange(choice)
             self.after_attempt(choice)
-            # if the player kept playing after winning, we don't want to exit
-            # this loop
+            # if the player kept playing after winning, we don't want
+            # to exit this loop
             if not self.victory and grid.largest >= self.goal:
-                # first victory in this game loop; if the player keeps playing,
-                # the time the grid jams will be considered an "overvictory"
-                # instead of a loss
+                # first victory in this game loop; if the player keeps
+                # playing, the time the grid jams will be considered an
+                # "overvictory" instead of a loss
                 self.victory = True
                 break
         # after loop stuff
@@ -158,8 +162,8 @@ class Base2048Frontend(ABC):
             self.on_player_quit()
         elif self.victory:
             if is_jammed:
-                # the game has jammed, but the player had already won, so it's
-                # an "overvictory"
+                # the game has jammed, but the player had already won,
+                # so it's an "overvictory"
                 self.on_player_overvictory()
             else:
                 # player's winning for the first time

@@ -17,22 +17,31 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Declares the `Cell` class.
+"""Declares the `Cell` class, which represents one tile
+in the game grid.
 """
 
 from functools import partialmethod
 from typing import Sequence
 
-from py2048 import Point
-from py2048.utils import check_int, type_check
+from py2048.core import Point
+from py2048.utils import (
+    ExpectationError,
+    InvalidCellIntError,
+    either_0_power2,
+    type_check,
+)
 
 
 class Cell:
     """Individual number in the 2048 grid.
 
-    Besides the number, it contains a `_lock` boolean that represents whether
-    it can move in this cycle (this prevents an 8 moving into another 8 and
-    the resulting 16 merging into another 16, for example.
+    The `Point` of each a `Cell` 'c' can be accessed as `c.point`,
+    and its coordinates can be directly accessed as `c.x` and `c.y`.
+    Besides storing and validating integers, it contains a `_lock`
+    boolean that represents whether it can move in this cycle
+    (this prevents an 8 moving into another 8 and the resulting 16
+    merging into another 16, for example.
     """
 
     def __init__(self, point: Point, number: int = 0) -> None:
@@ -50,25 +59,32 @@ class Cell:
 
     @number.setter
     def number(self, value: int) -> None:
-        check_int(value)
+        if not isinstance(value, int):
+            raise ExpectationError(value, int)
+        if not either_0_power2(value):
+            raise InvalidCellIntError(
+                f"Cannot assign non-power of 2 {value} to {self!r}"
+            )
         self._number = value
 
     def __bool__(self) -> bool:
-        return bool(self.number)
+        return bool(self._number)
 
     def __eq__(self, other) -> bool:
-        # docs state that 'If a class does not define an `__eq__()` method it
-        # should not define a `__hash__()` operation either'. We want to define
-        # `__hash__`, so we must define `__eq__` as well. Two Cells are the
-        # same Cell iff they're at the same place, no matter their number.
+        # docs state that 'If a class does not define an `__eq__()`
+        # method it should not define a `__hash__()` operation either'.
+        # We want to define `__hash__`, so we must define `__eq__` as
+        # well. Two Cells are the same iff they're at the same place,
+        # no matter their number.
         if isinstance(other, type(self)):
             return self.point == other.point
         return NotImplemented
 
     def __hash__(self) -> int:
         # we want Cells to be hashable so that they can be used in sets
-        # if two objects test as equal, then they MUST have the same hash value
-        # objects that have a hash MUST produce the same hash over time
+        # if two objects test as equal, then they MUST have the same
+        # hash value objects that have a hash MUST produce the same
+        # hash over time
         return hash((type(self), self.x, self.y))
 
     def __gt__(self, other) -> bool:
@@ -96,10 +112,10 @@ class Cell:
     unlock = partialmethod(_set_lock, False)
 
     def __repr__(self) -> str:
-        return f"Cell({self.x}, {self.y}, {self.number})"
+        return f"Cell({self.x}, {self.y}, {self._number})"
 
     def __str__(self) -> str:
-        return str(self.number)
+        return str(self._number)
 
 
 Tissue = Sequence[Cell]

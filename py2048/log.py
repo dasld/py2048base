@@ -20,9 +20,11 @@
 import logging
 import sys
 
-from py2048 import APPNAME, DATA_DIR
+from py2048 import APPNAME
+from py2048.core import DATA_DIR
 
-__all__ = ["LOGGER", "setup_logger"]
+
+__all__ = ["logger", "setup_logger"]
 
 
 # setup log folder and log file path
@@ -34,7 +36,7 @@ HANDLERS = (
     logging.FileHandler(filename=FPATH, mode="w"),
     logging.StreamHandler(stream=sys.stderr),
 )
-HANDLERS[-1].setLevel(logging.ERROR)  # will override the logger's level
+HANDLERS[-1].setLevel(logging.ERROR)  # overrides the logger's level
 
 # set up a formatter (to be used for all handlers)
 FORMATTER = logging.Formatter(
@@ -52,14 +54,14 @@ FORMATTER = logging.Formatter(
 
 
 def setup_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    for h in HANDLERS:
-        h.setFormatter(FORMATTER)
-        logger.addHandler(h)
-        logger.info("Loaded handler: '%s'.", h)
-    logger.info("Created '%s'.", logger)
-    return logger
+    this_logger = logging.getLogger(name)
+    for hand in HANDLERS:
+        hand.setFormatter(FORMATTER)
+        this_logger.addHandler(hand)
+        this_logger.info("Loaded handler: '%s'.", hand)
+    this_logger.info("Created '%s'.", this_logger)
+    return this_logger
 
 
 # set up the main logger and equip it
-LOGGER = setup_logger(APPNAME)
+logger = setup_logger(APPNAME)

@@ -30,14 +30,8 @@ from __future__ import annotations
 import pytest
 import random
 
-from . import (
-    APPNAME,
-    VERSION,
-    BaseGameGrid,
-    ExpectationError,
-    Point,
-)
-from .utils import is_container, type_check
+from .core import BaseGameGrid, Point
+from .utils import ExpectationError, is_container, type_check
 
 
 class TestGenerics:
@@ -90,10 +84,10 @@ class TestGenerics:
         ]
 
         for obj, expectation, boolean in goods:
-            assert type_check(obj, expectation, positive=boolean) is None
+            assert type_check(obj, expectation, was_positive=boolean) is None
         for obj, expectation, boolean in bads:
             with pytest.raises(ExpectationError):
-                type_check(obj, expectation, positive=boolean)
+                type_check(obj, expectation, was_positive=boolean)
 
 
 class IntGameGrid(BaseGameGrid):
@@ -135,10 +129,10 @@ class TestIntGameGrid:
 
     @staticmethod
     def _index_columns(grid: IntGameGrid, cols: int) -> None:
-        """Ensure the grid columns can be indexed for reading and assignment.
+        """Ensure the grid columns can be indexed for reading.
         """
 
-        # keep a copy  of the columns due to another loop in this method
+        # keep a copy of the columns due to another loop in this method
         cells = []
         for i, col in enumerate(grid.columns()):
             assert grid[i] == col
@@ -160,7 +154,7 @@ class TestIntGameGrid:
 
     @staticmethod
     def _index_rows(grid: IntGameGrid, cols: int, rows: int) -> None:
-        """Ensure the grid rows can be indexed for reading and assignment.
+        """Ensure the grid rows can be indexed for reading.
         """
 
         cells = cols * rows
@@ -171,7 +165,6 @@ class TestIntGameGrid:
                 assert cell == (i * cols) + j
         # check the points accessed directly by rows match the Z shape
         for cell, number in zip(grid.values(by="row"), range(cells)):
-            # print(cell, number)
             assert cell == number
         # try bad indexes
         for bad in range(30):
@@ -188,7 +181,5 @@ class TestIntGameGrid:
             (wide, big, small),
             (tall, small, big),
         ):
-            print()
-            print(grid)
             self._index_columns(grid, cols)
             self._index_rows(grid, cols, rows)

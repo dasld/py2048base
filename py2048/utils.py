@@ -44,6 +44,7 @@ __all__ = [
     # generic functions
     "check_int",
     "classname",
+    "either_0_power2",
     "hexid",
     "is_container",
     "type_check",
@@ -51,6 +52,7 @@ __all__ = [
     # exceptions
     "Base2048Error",
     "ExpectationError",
+    "InvalidCellIntError",
     "NegativeIntegerError",
 ]
 
@@ -88,7 +90,7 @@ def typename(thing: Any) -> str:
     """Return the name of its argument's class.
     """
 
-    return type(thing).__name__
+    return thing.__class__.__name__
 
 
 def classname(thing: Any) -> str:
@@ -117,25 +119,26 @@ def is_container(thing: Any) -> bool:
 
 
 def type_check(
-    value: Any, expected: Expectation, positive: bool = True
+    value: Any, expected: Expectation, was_positive: bool = True
 ) -> None:
     """Verify whether `value` is of an appropriate type, or
     is not of a forbidden one.
 
     :param Any value: the object to check
     :param Expectation expected: a class or a sequence of classes
-    :param bool positive: if `True`, raises `ExpectationError` if the type of
-        `value` is not listed in, or differs from, `expected`.
-        If `False`, raises the error if the type of `value` is listed in, or
-         equals, `expected`.
+    :param bool was_positive: if `True`, raises `ExpectationError` if
+           the type of `value` IS NOT listed in, or DIFFERS from,
+           `expected`.
+           If `False`, raises the error if the type of `value` IS
+           listed in, or EQUALS, `expected`.
     """
 
     if is_container(expected):
-        match = type(value) in expected
+        matches = type(value) in expected
     else:
-        match = isinstance(value, expected)
-    if match != positive:
-        raise ExpectationError(value, expected, positive=positive)
+        matches = isinstance(value, expected)
+    if matches != was_positive:
+        raise ExpectationError(value, expected, was_positive=was_positive)
 
 
 def check_int(i: int) -> None:
@@ -148,6 +151,17 @@ def check_int(i: int) -> None:
         raise NegativeIntegerError(i)
 
 
+def either_0_power2(integer: int) -> bool:
+    """Adapted from: https://www.geeksforgeeks.org/python-program-to-find-whether-a-no-is-power-of-two/
+
+    A power of 2 bitwise-AND its predecessor always equals 0.
+    :param integer: any `int`
+    :return: whether `integer` is either 0 or a (positive) power of 2
+    """
+
+    return not integer & (integer - 1)
+
+
 # -- CLASSES
 # Exceptions
 class Base2048Error(Exception):
@@ -155,13 +169,12 @@ class Base2048Error(Exception):
 
 
 class NegativeIntegerError(Base2048Error, ValueError):
-    """Raised when a negative `int` is found when a positive one or 0 was
-    required.
+    """Raised when a negative `int` is found when a positive one or 0
+    was required.
     """
 
     STD_MESSAGE = f"Only non-negative integers can be used in a {APPNAME} grid"
 
-    # use "" instead of None
     def __init__(self, number: int, message: Optional[str] = None) -> None:
         self.number = number
         if message:
@@ -175,6 +188,12 @@ class NegativeIntegerError(Base2048Error, ValueError):
         return f"{self.message}{self.STD_MESSAGE}; but {self.number} found"
 
 
+class InvalidCellIntError(Base2048Error, ValueError):
+    """Raised when a Cell is assigned an invalid value
+    (not `int`, negative `int`, non-power of 2 `int`).
+    """
+
+
 class ExpectationError(Base2048Error, TypeError):
     """Raised when the type of an argument is incorrect.
 
@@ -186,23 +205,23 @@ class ExpectationError(Base2048Error, TypeError):
         problem: Any,
         expectation: Expectation,
         *args: str,
-        positive: bool = True,
+        was_positive: bool = True,
     ) -> None:
         if is_container(expectation):
             self.expectation = "/".join(map(classname, expectation))
         else:
             self.expectation = classname(expectation)
-        self.positive = positive
         self.problem = repr(problem)
         self.problem_type = typename(problem)
         if args:
             self.message = "".join(args).rstrip() + ". "
         else:
             self.message = ""
+        self.was_positive = was_positive
         super().__init__(*args)
 
     def __str__(self) -> str:
-        if self.positive:
+        if self.was_positive:
             msg = (
                 f"{self.message}Expected {self.expectation}, "
                 f"but {self.problem} is {self.problem_type}"
