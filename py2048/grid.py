@@ -32,12 +32,9 @@ from functools import partial
 from itertools import chain
 from typing import (
     Callable,
-    Dict,
     Iterable,
     Iterator,
-    List,
     Optional,
-    Set,
     cast,
 )
 
@@ -57,22 +54,48 @@ logger = logging.getLogger(__name__)
 class Grid(SquareGameGrid):
     """Matrix of `Cell`s.
 
-    This class is responsible for merging Cells into each other and
+    This class is responsible for merging `Cell`s into each other and
     recording game states, so that the user can "undo" their last
     input.
     It's not intended to display the game state, although `__str__`
     returns each row in a separate line.
 
-    Main ("public") methods:
+    --------------------------------------------------------------------
+    Attributes (non-callable):
+    attempt: int
+        How many times the player has given input.
+    cycle: int
+        How many times the game state has changed.
+    empty_cells: set[Cell]
+        Which Cells are empty (0-numbered).
+    history: list[Snapshot]
+        The game states since the last reset, from oldest to newest.
+    is_empty: bool
+        Whether every Cell is 0-numbered.
+    is_jammed: bool
+        Whether there's any legal movement left.
+    largest: int
+        The number of the highest(s) Cell(s).
+    score: int
+        Counter that increases by N each time an N-Cell appears.
 
+    Main ("public") methods:
+    autofill(self, no_jamming: bool = True) -> None:
+        Assign random numbers to every `Cell`.
     drag(self, to: Directions) -> bool
-        Attempts to move each Cell towards the given Direction,
-        starting with the ones closest to that direction (that is,
-        trying to move left picks the columns from left to right,
-        trying to move right picks columns from right to left, and
-        so on).
+        Attempt to move each Cell towards the given Direction.
+    new_from_snapshot(cls, snapshot: Snapshot) -> Grid:
+        Return a new `Grid` with the values of snapshot.
+    reset(self) -> None:
+        Reset all counters and Cells, clear the snapshots history.
+    seed(self, amount: int = STARTING_AMOUNT) -> None:
+        Assign a random initial value to random empty Cells.
+    store_snapshot(self, snapshot: Optional[Snapshot] = None) -> None:
+        Store a game state in `self.history`.
     undo(self, ignore_empty: bool = True) -> bool
-        Restore the game to its last state.
+        Restore the game to its previous state.
+    update_with_snapshot(self, snapshot: Snapshot) -> None:
+        Replace the `Cell`s values with the ones from the snapshot.
     """
 
     # -- "public" class variables
@@ -84,11 +107,11 @@ class Grid(SquareGameGrid):
     SEEDING_VALUES = (2, 4)
     # the `is2048like` method will use this list to validate a goal
     # 2**11 == 2048
-    NUMBERS: List[int] = [2 ** power for power in range(1, 12)]
+    NUMBERS: list[int] = [2 ** power for power in range(1, 12)]
     # no power of 2 higher than CEILING will be accepted as the
     # game's goal
     # sys.maxsize == (2**63)-1 on 64bits machines
-    CEILING = sys.maxsize
+    CEILING = sys.maxsize // 2
     cells = SquareGameGrid.values
 
     # -- "private" class variables
@@ -121,7 +144,7 @@ class Grid(SquareGameGrid):
                 f"{side_squared} STARTING_AMOUNT's"
             )
         super().__init__(side)
-        self._vectors_getters: Dict[Directions, Callable] = {
+        self._vectors_getters: dict[Directions, Callable] = {
             # no parenthesis here! remember not to call these methods!
             Directions.LEFT: self.columns,
             Directions.RIGHT: partial(self.columns, reverse=True),
@@ -130,8 +153,8 @@ class Grid(SquareGameGrid):
         }
         # as the grid starts empty, every Cell starts in the
         # `empty_cells` set
-        self.empty_cells: Set[Cell] = set(self.cells())
-        self.history: List[Snapshot] = []
+        self.empty_cells: set[Cell] = set(self.cells())
+        self.history: list[Snapshot] = []
         # `attempt` is how many times the player has given input, even
         # if that didn't change the game state
         self.attempt = 0
@@ -141,9 +164,11 @@ class Grid(SquareGameGrid):
         # merges into another N-Cell
         self.score = 0
         # the grid could start jammed if
-        # self.STARTING_AMOUNT == side ** 2
+        # self.STARTING_AMOUNT == len(self)
         if self.is_jammed:
-            self.autofill()  # will also store a snapshot
+            random_cell = random.choice(tuple(self.cells()))
+            self._set_cell(random_cell, 0)
+            self.store_snapshot()
         # do not store a snapshot in this case: the player shouldn't be
         # able to "undo" the grid until it's totally empty!
         self.check_integrity()
@@ -163,8 +188,7 @@ class Grid(SquareGameGrid):
         self._set_cell(self[key], number)
 
     def _set_cell(self, cell: Cell, number: int) -> None:
-        """Assign `number` to `Cell` and update `empty_cells`.
-        """
+        """Assign `number` to `Cell` and update `empty_cells`."""
 
         cell.number = number
         if number:
@@ -175,10 +199,10 @@ class Grid(SquareGameGrid):
             self.empty_cells.add(cell)
 
     def _neighbor(self, cell: Cell, to: Directions) -> Optional[Cell]:
-        """Return the next Cell in the given direction.
+        """Return the next `Cell` in the given direction.
 
-        This returns `None` if there's no such Cell (if `cell` is at
-        the edge of the board, for example).
+        Returns `None` if there's no such `Cell` (if `cell` is at the
+        edge of the board, for example).
         """
 
         x, y = cell.point + self._SHIFTS[to]
@@ -224,7 +248,7 @@ class Grid(SquareGameGrid):
         starting number was positive), then update the numbers of
         `cell` and of its pivot.
 
-        :return: whether movement occurred
+        :return bool: whether movement occurred
         """
 
         if not cell:  # empty Cells don't move
@@ -269,8 +293,7 @@ class Grid(SquareGameGrid):
 
     @staticmethod
     def _check_snapshot(snapshot: Snapshot) -> None:
-        """Ensure a given snapshot has at least one positive value.
-        """
+        """Ensure a given snapshot has at least one positive value."""
 
         if not any(snapshot.values()):
             raise ValueError(f"Cannot record an empty snapshot: {snapshot}")
@@ -284,7 +307,7 @@ class Grid(SquareGameGrid):
         than `cls.CEILING`.
 
         :param int number: the integer to check
-        :return: either valid or invalid
+        :return bool: either valid or invalid
         """
 
         highest = cls.NUMBERS[-1]
@@ -340,8 +363,7 @@ class Grid(SquareGameGrid):
 
     @classmethod
     def new_from_snapshot(cls, snapshot: Snapshot) -> Grid:
-        """Return a new Grid with the values of `snapshot`.
-        """
+        """Return a new Grid with the values of `snapshot`."""
 
         # snapshots should be squares, so a snapshot with k cells will
         # have side sqrt(k)
@@ -359,7 +381,7 @@ class Grid(SquareGameGrid):
         """Try to restore the game to its previous state.
 
         :param bool ignore_empty: whether to ignore a lack of snapshots
-        :return: whether undoing occurred
+        :return bool: whether undoing occurred
         """
 
         if len(self.history) < 2:
@@ -381,8 +403,7 @@ class Grid(SquareGameGrid):
 
     @property
     def is_empty(self) -> bool:
-        """Return whether every Cell is empty (ie, 0-numbered).
-        """
+        """Return whether every Cell is empty (ie, 0-numbered)."""
 
         empties, cells = len(self.empty_cells), len(self)
         assert empties <= cells, f"{self!r} has more empty Cells than Cells!"
@@ -402,7 +423,7 @@ class Grid(SquareGameGrid):
                 repr(e) for e in sorted(cast(Iterable, self.empty_cells))
             ),
         )
-        changed: List[Cell] = []
+        changed: list[Cell] = []
         for cell in random.sample(self.empty_cells, amount):
             if cell:
                 raise Base2048Error(
@@ -414,7 +435,8 @@ class Grid(SquareGameGrid):
             raise Base2048Error("Seeding didn't change the number of any Cell")
         changed.sort()
         logger.debug(
-            "Seeded those cells: %s.", "  ".join(map(repr, changed)),
+            "Seeded those cells: %s.",
+            "  ".join(map(repr, changed)),
         )
         self.store_snapshot()
 
@@ -422,13 +444,17 @@ class Grid(SquareGameGrid):
         """Try to move every Cell towards `to`, starting by the vectors
         closest to the origin.
 
+        Trying to move left picks the columns from left to right,
+        trying to move right picks columns from right to left, and
+        so on.
+
         Increment the attempt counter, then try to move every Cell in
         the given direction, starting with the vectors closest to the
         origin.
         If that changed anything, increment the cycle counter by 1 and
         seed itself by 1.
 
-        :return: whether the game state changed
+        :return bool: whether the game state changed
         """
 
         vectors = self._get_vectors(to)
@@ -473,7 +499,9 @@ class Grid(SquareGameGrid):
                     continue
                 if cell.number == neighbor.number:
                     logger.debug(
-                        "Not jammed: %r is next to %r.", cell, neighbor,
+                        "Not jammed: %r is next to %r.",
+                        cell,
+                        neighbor,
                     )
                     return False
         logger.debug("Jammed grid detected!")

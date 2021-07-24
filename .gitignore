@@ -7,7 +7,9 @@ py2048/frontends/__pycache__/
 
 # temporary and backup files
 *~
+*#
 *.bak
+commit.txt
 
 # shell scripts
 *.sh

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# frontends/basefrontend.py
+# basefrontend.py
 #
 # This file is part of py2048.
 #
@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Declares the Base2048Frontend class, that runs the game loop and
-updates the game grid according to the player input.
+"""Declares the Base2048Frontend class, which runs the game loop and
+updates the game grid according to player input.
 """
 
 import random
@@ -44,7 +44,7 @@ class Base2048Frontend(ABC):
     # how many seconds to sleep when in auto mode
     SLEEP_S = 1
     # converting seconds to milliseconds
-    SLEEP_MS = int(SLEEP_S * 1_000)
+    SLEEP_MS = round(SLEEP_S * 1_000)
 
     def restart(self) -> None:
         self.victory = False
@@ -106,17 +106,26 @@ class Base2048Frontend(ABC):
     # MAIN LOOP: shouldn't be overridden
     @final
     def play2048(self) -> None:
-        """The main loop repeatedly calls `self.choice_function`. If
-        that raises `KeyboardInterrupt`, it returns immediately,
-        skipping `self.after_play()`. If that raises `EOFError`, it
-        exits the loop and calls `self.after_play()`.
-        This loops until either a) the grid is jammed; or b) the player
-        exits; or c) the goal has been reached for the first time.
+        """Main loop that repeatedly calls `self.choice_function` until
+        either a) the grid is jammed; or b) the player exits; or c) the
+        goal has been reached for the first time.
+
+        The player can exit in two ways:
+        1) If `self.choice_function` raises `KeyboardInterrupt`, the
+        loop returns immediately, skipping `self.after_play()`.
+        2) If it raises `EOFError`, the loop ends and then calls
+        `self.after_play`.
+
+        This method is not supposed to be overridden when subclassing
+        this class.
         """
 
-        player_quit = False
         grid = self.grid
+        # calling `on_play` before checks allows this method to ensure
+        # the grid's ready to enter the game loop
         self.on_play()
+        # will become True iff the loop ended not due to a grid jamming
+        player_quit = False
         if grid.is_empty:
             raise Base2048Error(
                 f"Asked to play 2048 with an empty grid:\n{grid}"
@@ -133,15 +142,20 @@ class Base2048Frontend(ABC):
                 choice = self.choice_function()
             except KeyboardInterrupt:
                 # quickly exit due to Ctrl-C
-                print()  # makes terminal looks nicer
+                print(flush=True)  # makes terminal looks nicer
                 return
             except EOFError:
                 # Ctrl-D/Z or some quit-command
                 player_quit = True
                 break
-            assert choice in Directions
+            assert choice in Directions, (
+                f"grid.Grid.choice_function returned {choice!r}; "
+                "had to be a Directions instance"
+            )
             self.after_choice(choice)
             dragged = grid.drag(choice)
+            # we don't need to update is_jammed if the game state
+            # didn't change!
             if dragged:
                 self.after_change(choice)
                 is_jammed = grid.is_jammed
@@ -169,7 +183,10 @@ class Base2048Frontend(ABC):
                 # player's winning for the first time
                 self.on_player_victory()
         else:
-            assert is_jammed
+            assert is_jammed, (
+                "If the player neither won nor quit and the grid isn't "
+                "jammed, why did the game loop stop?"
+            )
             self.on_player_loss()
 
     # the following methods MUST be overridden

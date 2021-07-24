@@ -29,12 +29,37 @@ from __future__ import annotations
 
 import pytest
 import random
+import sys
 
 from .core import BaseGameGrid, Point
-from .utils import ExpectationError, is_container, type_check
+from .utils import (
+    ExpectationError,
+    NegativeIntegerError,
+    classname,
+    either_0_power2,
+    is_container,
+    type_check,
+)
 
 
-class TestGenerics:
+class TestUtils:
+    _BIG_NUMBER = 3_000
+    _POWERS2 = {
+        _BIG_NUMBER: {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048},
+    }
+
+    def test_classname(self) -> None:
+        for name in ("_Foo", "_Bar", "_Baz"):
+            exec(f"class {name}: pass")  # create a class
+            cls = locals()[name]
+            instance = cls()
+            assert name == classname(cls) == classname(instance)
+
+    def test_either_0_power2(self) -> None:
+        big_number = self._BIG_NUMBER
+        powers = {n for n in range(big_number) if either_0_power2(n)}
+        assert powers == self._POWERS2[big_number]
+
     def test_iscontainer(self) -> None:
         class NewList(list):
             pass
@@ -90,6 +115,22 @@ class TestGenerics:
                 type_check(obj, expectation, was_positive=boolean)
 
 
+class TestPoint:
+    def test_point(self) -> None:
+        # test type problems
+        for obj in (str(), float(), complex(), tuple()):
+            with pytest.raises(ExpectationError):
+                Point(obj, obj)
+        # test value problems
+        for i in range(1, 10):
+            good_point = Point(i, i)
+            assert isinstance(good_point, Point)
+            bad_coordinates = [(-i, i), (i, -i), (-i, -i)]
+            for x, y in bad_coordinates:
+                with pytest.raises(NegativeIntegerError):
+                    Point(x, y)
+
+
 class IntGameGrid(BaseGameGrid):
     CELLCLASS = int
 
@@ -117,7 +158,8 @@ class IntGameGrid(BaseGameGrid):
             while pool[i] == current:
                 i = random.randint(0, len(pool) - 1)
             self.mapping[point] = pool.pop(i)
-        assert not pool
+        if pool:
+            sys.exit("IntGameGrid._shuffle didn't work as expected; aborting.")
 
 
 class TestIntGameGrid:
@@ -129,10 +171,9 @@ class TestIntGameGrid:
 
     @staticmethod
     def _index_columns(grid: IntGameGrid, cols: int) -> None:
-        """Ensure the grid columns can be indexed for reading.
-        """
+        """Ensure the grid columns can be indexed for reading."""
 
-        # keep a copy of the columns due to another loop in this method
+        # keep a copy of the values due to another loop in this method
         cells = []
         for i, col in enumerate(grid.columns()):
             assert grid[i] == col
@@ -154,8 +195,7 @@ class TestIntGameGrid:
 
     @staticmethod
     def _index_rows(grid: IntGameGrid, cols: int, rows: int) -> None:
-        """Ensure the grid rows can be indexed for reading.
-        """
+        """Ensure the grid rows can be indexed for reading."""
 
         cells = cols * rows
         assert cells == len(grid.mapping)

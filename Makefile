@@ -1,3 +1,7 @@
+#!/usr/bin/env make -f
+
+# for the shebang line, see:
+# https://stackoverflow.com/a/7123267
 # we need to use hard tabs instead of spaces in makefiles!
 # https://stackoverflow.com/a/14109796
 
@@ -12,7 +16,7 @@ build:
 
 
 test:
-	pytest-3 py2048/test.py
+	pytest-3 -v py2048/test.py
 
 
 # do not indent (with tabs) Makefile directives such as ifeq
@@ -23,6 +27,8 @@ ifeq ($(VERSION),)
 else
 	$(info Pushing version $(VERSION))
 	git push -u origin main
+	# erase commit.txt
+	echo -n '' >commit.txt
 endif
 
 

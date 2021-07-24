@@ -73,17 +73,17 @@ The other overriden methods shouldn't return anything.
 `player_quit` is called when the player exits the game before winning or
 losing.
 An "overvictory" is what happens when the grid "jams" (runs out of valid movements)
-but the player had already reached the target number.
+but the player had already won (had already reached the target goal number).
 
 To run tests
 ============
 
-We're using the `unittest` native Python library to check the correctness of the
-basic game structures.
+We're using the `pytest` library to check the correctness of the basic
+data structures.
 To run the tests, open a terminal, move into the root folder of the project
 (the one which contains `setup.py`), and type the following:
 
-    python3 -m py2048.tests
+    pytest-3 -v py2048/test.py
 
 Make sure you're in the right folder,
 that there are no slashes in the command, and
@@ -120,7 +120,7 @@ This `locked` property prevents a 2 merging into a 2 and the resulting 4 merging
 into another 4 all in a single cycle, for example.
 If you play the original game, you'll notice that is not allowed.
 
-The `Grid` is wrapper over a `dict` that maps points into `Cells`
+The `Grid` is a wrapper over a `dict` that maps points into `Cells`
 (and points are named tuples that store x and y coordinates).
 This class (along with `py2048.basefrontend.Base2048Frontend`), implements most
 of the game logic.

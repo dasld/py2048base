@@ -21,7 +21,7 @@
 # other modules we import require them, so we're avoiding circular
 # importing errors
 _TESTING = False  # used only in setup.py
-__version__ = (0, 44)
+__version__ = (0, 45)
 VERSION = ".".join(map(str, __version__))
 APPNAME = __name__
 

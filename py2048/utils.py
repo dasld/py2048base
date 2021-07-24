@@ -22,13 +22,14 @@
 The "constants" aren't that important to the rest of the package.
 Most are just for type-hinting and type annotations.
 
-The functions aren't related to board games at all.
+The functions aren't related to board games at all; functions and
+classes specific to board games are in core.py.
 """
 
 import enum
 import inspect
 from collections.abc import Collection
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Type, Union
 
 from py2048 import APPNAME
 
@@ -60,7 +61,7 @@ __all__ = [
 # -- CONSTANTS
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
 Expectation = Union[Type, Sequence[Type]]
-IntPair = Tuple[int, int]
+IntPair = tuple[int, int]
 ModuleType = type(enum)  # just for annotation purposes
 Vector = Sequence[int]
 
@@ -86,14 +87,13 @@ NONE_SLICE = slice(None)
 
 
 # -- GENERAL-PURPOSE FUNCTIONS
-def typename(thing: Any) -> str:
-    """Return the name of its argument's class.
-    """
+def typename(thing: Any, /) -> str:
+    """Return the name of its argument's class."""
 
     return thing.__class__.__name__
 
 
-def classname(thing: Any) -> str:
+def classname(thing: Any, /) -> str:
     """Return its argument's name, if it's a class,
     or the name of its argument's class.
     """
@@ -103,16 +103,14 @@ def classname(thing: Any) -> str:
     return typename(thing)
 
 
-def hexid(thing: Any) -> str:
-    """Return the hexadecimal `id` of its argument as a string.
-    """
+def hexid(thing: Any, /) -> str:
+    """Return the hexadecimal `id` of its argument as a string."""
 
     return hex(id(thing))
 
 
-def is_container(thing: Any) -> bool:
-    """Determine whether the argument is an iterable, but not a `str`.
-    """
+def is_container(thing: Any, /) -> bool:
+    """Determine whether the argument is an iterable, but not a `str`."""
 
     cls = type(thing)
     return issubclass(cls, Collection) and not issubclass(cls, str)
@@ -141,25 +139,26 @@ def type_check(
         raise ExpectationError(value, expected, was_positive=was_positive)
 
 
-def check_int(i: int) -> None:
+def check_int(integer: int, /) -> None:
     """Raise `ExpectationError` if `obj` is not `int`, and
     `NegativeIntegerError` if it's a negative `int`.
     """
 
-    type_check(i, int)
-    if i < 0:
-        raise NegativeIntegerError(i)
+    type_check(integer, int)
+    if integer < 0:
+        raise NegativeIntegerError(integer)
 
 
-def either_0_power2(integer: int) -> bool:
-    """Adapted from: https://www.geeksforgeeks.org/python-program-to-find-whether-a-no-is-power-of-two/
+def either_0_power2(integer: int, /) -> bool:
+    """Adapted from:
+    https://www.geeksforgeeks.org/python-program-to-find-whether-a-no-is-power-of-two/
 
     A power of 2 bitwise-AND its predecessor always equals 0.
     :param integer: any `int`
     :return: whether `integer` is either 0 or a (positive) power of 2
     """
 
-    return not integer & (integer - 1)
+    return not (integer & (integer - 1))
 
 
 # -- CLASSES

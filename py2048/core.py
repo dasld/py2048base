@@ -18,13 +18,13 @@
 # along with py2048.  If not, see <https://www.gnu.org/licenses/>.
 
 """Declares classes directly related to "grid games" such as
-chess and sudoku, but unrelated to 2048 specifically.
+chess and sudoku, but unrelated to 2048 in particular.
 
-The grid specifically designed for 2048 is `py2048.grid.Grid`.
-a few "constants" and auxiliary functions and exceptions.
+The grid specifically designed for 2048 is not here;
+it's `py2048.grid.Grid`.
 
-This module also declares DATA_DIR, which is the Path (from pathlib)
-where we store game data (such as logs).
+This module also defines DATA_DIR, which is the pathlib.Path where we
+store game data (such as logs).
 """
 
 # allowing postponed evaluation of annotations; see:
@@ -40,14 +40,11 @@ from itertools import count, repeat
 from pathlib import Path
 from typing import (
     Callable,
-    Dict,
     Hashable,
     Iterator,
     Literal,
     Mapping,
     Optional,
-    Set,
-    Tuple,
     Type,
     Union,
 )
@@ -86,8 +83,7 @@ DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
 
 # auxiliary classes
 class Point(namedtuple("_Point", "x y")):
-    """Namedtuple containing a pair of non-negative integers.
-    """
+    """Namedtuple containing a pair of non-negative integers."""
 
     # `__slots__`is "a declaration inside a class that saves memory by
     # pre-declaring space for instance attributes and eliminating
@@ -105,7 +101,7 @@ class Point(namedtuple("_Point", "x y")):
 
     def __add__(self, other: IntPair) -> IntPair:
         """>>> Point(x=3, y=2) + (-1, 0)
-               (2, 2)
+        ... (2, 2)
         """
 
         try:
@@ -117,7 +113,7 @@ class Point(namedtuple("_Point", "x y")):
         return f"<{self.x},{self.y}>"
 
 
-Line = Tuple[Point, ...]
+Line = tuple[Point, ...]
 Snapshot = Mapping[Point, int]
 
 
@@ -139,7 +135,7 @@ class Directions(Enum):
         return ", ".join(map(str, cls))
 
     @classmethod
-    def paired_with(cls, keys) -> Dict[Hashable, Directions]:
+    def paired_with(cls, keys) -> dict[Hashable, Directions]:
         got, target = len(keys), len(cls)
         if got != target:
             raise ValueError(
@@ -173,7 +169,7 @@ class GridIndex:
     """
 
     SingletonType = Union[int, slice, EllipsisType]
-    Type = Union[SingletonType, Tuple[SingletonType, SingletonType]]
+    Type = Union[SingletonType, tuple[SingletonType, SingletonType]]
     _NONE_MSG = "Cannot make a GridIndex from None"
 
     def __init__(self, *args: Type) -> None:
@@ -266,7 +262,7 @@ class BaseGameGrid(ABC):
             raise ValueError(
                 "'width' and 'height' must be both greater than or equal to 2"
             )
-        self.mapping: Dict[Point, cellclass] = {}
+        self.mapping: dict[Point, cellclass] = {}
         constructor = self.CELLCONSTRUCTOR or cellclass
         for x in range(width):
             for y in range(height):
@@ -288,22 +284,20 @@ class BaseGameGrid(ABC):
         return NotImplemented
 
     @property
-    def _distinct_xs(self) -> Set[int]:
+    def _distinct_xs(self) -> set[int]:
         return set(point.x for point in self.mapping.keys())
 
     @property
-    def _distinct_ys(self) -> Set[int]:
+    def _distinct_ys(self) -> set[int]:
         return set(point.y for point in self.mapping.keys())
 
     def _axisX(self, reverse: bool = False) -> Iterator[int]:
-        """Yield each x number in ascending or descending order.
-        """
+        """Yield each x number in ascending or descending order."""
 
         return iter(sorted(self._distinct_xs, reverse=reverse))
 
     def _axisY(self, reverse: bool = False) -> Iterator[int]:
-        """Yield each y number in ascending or descending order.
-        """
+        """Yield each y number in ascending or descending order."""
 
         return iter(sorted(self._distinct_ys, reverse=reverse))
 
@@ -329,11 +323,10 @@ class BaseGameGrid(ABC):
         return range(start, stop, step)
 
     def _select_keys(self, key: GridIndex.Type) -> Line:
-        """Yield each Point that matches `key`.
-        """
+        """Yield each Point that matches `key`."""
 
         x, y = GridIndex(key)
-        restrictions: Set[Callable[[Point], bool]] = set()
+        restrictions: set[Callable[[Point], bool]] = set()
         # restricting the X-axis
         if isinstance(x, int):
             restrictions.add(lambda testing: testing.x == x)
@@ -358,8 +351,7 @@ class BaseGameGrid(ABC):
                 yield point
 
     def __getitem__(self, key: GridIndex.Type) -> Union[Point, Line]:
-        """Return either one Point or a tuple of Points.
-        """
+        """Return either one Point or a tuple of Points."""
 
         if isinstance(key, Point):
             # no need for further complications when getting a single
@@ -425,7 +417,7 @@ class BaseGameGrid(ABC):
 
     def items(
         self, by: Literal["row", "column"] = "row"
-    ) -> Iterator[Tuple[Point, CELLCLASS]]:
+    ) -> Iterator[tuple[Point, CELLCLASS]]:
         return ((k, self.mapping[k]) for k in self.keys(by=by))
 
     # some synonyms
@@ -528,8 +520,7 @@ class BaseGameGrid(ABC):
 
 
 class SquareGameGrid(BaseGameGrid):
-    """BaseGameGrid enforced to remain square.
-    """
+    """BaseGameGrid enforced to remain square."""
 
     def __init__(self, side: int) -> None:
         super().__init__(side, side)
