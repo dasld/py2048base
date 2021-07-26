@@ -27,9 +27,10 @@ To run, simply:
 # https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
-import pytest
 import random
 import sys
+
+import pytest
 
 from .core import BaseGameGrid, Point
 from .utils import (

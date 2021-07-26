@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence, Type, Union
 
 from py2048 import APPNAME
 
-
 __all__ = [
     "EMPTY_TUPLE",
     "NONE_SLICE",

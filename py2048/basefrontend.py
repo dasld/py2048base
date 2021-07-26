@@ -63,7 +63,7 @@ class Base2048Frontend(ABC):
         # `goal = goal or 2048` would allow "goal = 0" to pass silently
         if goal is None:
             goal = 2048
-        elif not Grid.is2048like(goal):
+        elif not grid.is2048like(goal):
             raise ValueError(
                 "goal must be a positive power of 2 "
                 f"smaller than {grid.CEILING}"

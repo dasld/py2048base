@@ -45,8 +45,8 @@ from py2048.utils import (
     ExpectationError,
     NegativeIntegerError,
     classname,
+    either_0_power2,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class Grid(SquareGameGrid):
     undo(self, ignore_empty: bool = True) -> bool
         Restore the game to its previous state.
     update_with_snapshot(self, snapshot: Snapshot) -> None:
-        Replace the `Cell`s values with the ones from the snapshot.
+        Update each `Cell`'s value with the one from the snapshot.
     """
 
     # -- "public" class variables
@@ -105,7 +105,8 @@ class Grid(SquareGameGrid):
     # what values can be seeded in each Cell; tuple instead of set
     # because random.choice doesn't work with sets
     SEEDING_VALUES = (2, 4)
-    # the `is2048like` method will use this list to validate a goal
+    # this list might be used by concrete frontends, for example for
+    # displaying each 2048 number as an image
     # 2**11 == 2048
     NUMBERS: list[int] = [2 ** power for power in range(1, 12)]
     # no power of 2 higher than CEILING will be accepted as the
@@ -303,21 +304,13 @@ class Grid(SquareGameGrid):
     # class, especially by Base2048Frontend and its possible subclasses
     @classmethod
     def is2048like(cls, number: int) -> bool:
-        """Tell whether `number` is a positive power of 2 no greater
+        """Tell whether `number` is a (positive) power of 2 no greater
         than `cls.CEILING`.
-
-        :param int number: the integer to check
-        :return bool: either valid or invalid
+        :param int number: the integer to check.
+        :return bool: either valid or invalid.
         """
 
-        highest = cls.NUMBERS[-1]
-        assert highest == max(cls.NUMBERS)
-        while number > highest:
-            highest *= 2
-            if highest >= cls.CEILING:
-                break
-            cls.NUMBERS.append(highest)
-        return number in cls.NUMBERS
+        return either_0_power2(number) and (2 <= number <= cls.CEILING)
 
     def reset(self) -> None:
         """Set all counters and Cells to 0 and clear the snapshots

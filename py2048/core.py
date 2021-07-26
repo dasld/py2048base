@@ -63,7 +63,6 @@ from py2048.utils import (
     typename,
 )
 
-
 __all__ = [
     "DATA_DIR",
     # generic classes
