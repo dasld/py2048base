@@ -27,7 +27,7 @@ from typing import Sequence
 from py2048.core import Point
 from py2048.utils import (
     ExpectationError,
-    InvalidCellIntError,
+    CellError,
     either_0_power2,
     type_check,
 )
@@ -36,12 +36,12 @@ from py2048.utils import (
 class Cell:
     """Individual number in the 2048 grid.
 
-    The `Point` of each a `Cell` 'c' can be accessed as `c.point`,
-    and its coordinates can be directly accessed as `c.x` and `c.y`.
-    Besides storing and validating integers, it contains a `_lock`
-    boolean that represents whether it can move in this cycle
+    The `Point` of a `Cell` 'c' can be accessed as `c.point`, and
+    its coordinates directly accessed as `c.x` and `c.y`.
+    Besides storing and validating integers, this class contains a
+    `_lock` boolean that represents whether it can move in this cycle
     (this prevents an 8 moving into another 8 and the resulting 16
-    merging into another 16, for example.
+    merging into another 16, for example).
     """
 
     def __init__(self, point: Point, number: int = 0) -> None:
@@ -62,9 +62,7 @@ class Cell:
         if not isinstance(value, int):
             raise ExpectationError(value, int)
         if not either_0_power2(value):
-            raise InvalidCellIntError(
-                f"Cannot assign non-power of 2 {value} to {self!r}"
-            )
+            raise CellError(f"Cannot assign non-power of 2 {value} to {self!r}")
         self._number = value
 
     def __bool__(self) -> bool:
@@ -95,16 +93,21 @@ class Cell:
 
     def _set_lock(self, onoff: bool) -> None:
         type_check(onoff, bool)
+        if onoff and not self._number:
+            raise CellError(f"Cannot lock 0-numbered Cell: {self!r}")
         self._lock = onoff
 
     is_locked = property(
         fget=lambda self: self._lock,
         fset=_set_lock,
         doc=(
-            "`_lock` is a `bool` that tells whether the `Cell` has already "
-            "moved this cycle. This prevents a 2 merging into a 2 and the "
-            "resulting 4 merging into another 4 all in a single movement, "
-            "for example."
+            "`is_locked` is a `bool` that tells whether the `Cell` has "
+            "already moved this cycle. "
+            "This prevents a 2 merging into a 2 and the resulting 4 "
+            "merging into another 4 all in a single movement, "
+            "for example. "
+            "The value can be assigned directly (as in `c.is_locked = True`), "
+            "or through the `lock` and `unlock` methods."
         ),
     )
 

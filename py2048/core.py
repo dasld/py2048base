@@ -23,7 +23,7 @@ chess and sudoku, but unrelated to 2048 in particular.
 The grid specifically designed for 2048 is not here;
 it's `py2048.grid.Grid`.
 
-This module also defines DATA_DIR, which is the pathlib.Path where we
+This module also defines DATA_DIR, which is the `pathlib.Path` where we
 store game data (such as logs).
 """
 
@@ -56,7 +56,6 @@ from py2048.utils import (
     EMPTY_TUPLE,
     NONE_SLICE,
     EllipsisType,
-    IntPair,
     check_int,
     is_container,
     type_check,
@@ -97,16 +96,6 @@ class Point(namedtuple("_Point", "x y")):
         check_int(y)
         self = super(Point, cls).__new__(cls, x, y)
         return self
-
-    def __add__(self, other: IntPair) -> IntPair:
-        """>>> Point(x=3, y=2) + (-1, 0)
-        ... (2, 2)
-        """
-
-        try:
-            return self.x + other[0], self.y + other[1]
-        except (TypeError, ValueError, IndexError, KeyError):
-            return NotImplemented
 
     def __str__(self) -> str:
         return f"<{self.x},{self.y}>"

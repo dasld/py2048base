@@ -38,7 +38,6 @@ __all__ = [
     "NONE_SLICE",
     "EllipsisType",
     "Expectation",
-    "IntPair",
     "ModuleType",
     "Vector",
     # generic functions
@@ -51,8 +50,9 @@ __all__ = [
     "typename",
     # exceptions
     "Base2048Error",
+    "CellError",
     "ExpectationError",
-    "InvalidCellIntError",
+    "GridError",
     "NegativeIntegerError",
 ]
 
@@ -60,7 +60,6 @@ __all__ = [
 # -- CONSTANTS
 # https://github.com/python/cpython/blob/ebe20d9e7eb138c053958bc0a3058d34c6e1a679/Lib/types.py#L51
 Expectation = Union[Type, Sequence[Type]]
-IntPair = tuple[int, int]
 ModuleType = type(enum)  # just for annotation purposes
 Vector = Sequence[int]
 
@@ -161,12 +160,8 @@ def either_0_power2(integer: int, /) -> bool:
 
 
 # -- CLASSES
-# Exceptions
-class Base2048Error(Exception):
-    pass
-
-
-class NegativeIntegerError(Base2048Error, ValueError):
+# Generic exceptions
+class NegativeIntegerError(ValueError):
     """Raised when a negative `int` is found when a positive one or 0
     was required.
     """
@@ -186,13 +181,7 @@ class NegativeIntegerError(Base2048Error, ValueError):
         return f"{self.message}{self.STD_MESSAGE}; but {self.number} found"
 
 
-class InvalidCellIntError(Base2048Error, ValueError):
-    """Raised when a Cell is assigned an invalid value
-    (not `int`, negative `int`, non-power of 2 `int`).
-    """
-
-
-class ExpectationError(Base2048Error, TypeError):
+class ExpectationError(TypeError):
     """Raised when the type of an argument is incorrect.
 
     Just like `TypeError`, but more verbose.
@@ -232,3 +221,20 @@ class ExpectationError(Base2048Error, TypeError):
                 f"not allowed: {self.expectation}"
             )
         return msg
+
+
+# Specific exceptions
+class Base2048Error(Exception):
+    pass
+
+
+class CellError(Base2048Error):
+    """Raised when a Cell is assigned a negative integer, or is locked
+    when its number is non-zero.
+    """
+
+
+class GridError(Base2048Error):
+    """Raised when an operation would break the game logic or make the
+    grid invalid.
+    """

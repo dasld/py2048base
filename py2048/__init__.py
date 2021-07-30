@@ -21,26 +21,31 @@
 # other modules we import require them, so we're avoiding circular
 # importing errors
 _TESTING = False  # used only in setup.py
-__version__ = (0, 46)
+__version__ = (0, 47)
 VERSION = ".".join(map(str, __version__))
 APPNAME = __name__
 
 from py2048.basefrontend import Base2048Frontend
-from py2048.cell import Cell
+from py2048.cell import Cell, Tissue
 from py2048.core import (
     DATA_DIR,
     BaseGameGrid,
     Directions,
+    Line,
     Point,
+    Snapshot,
     SquareGameGrid,
 )
 from py2048.grid import Grid
 from py2048.log import setup_logger
 from py2048.utils import (
     Base2048Error,
+    CellError,
     ExpectationError,
-    InvalidCellIntError,
+    GridError,
+    ModuleType,
     NegativeIntegerError,
+    Vector,
     check_int,
     classname,
     either_0_power2,

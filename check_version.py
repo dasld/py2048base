@@ -15,13 +15,16 @@ we want to import the installed version of py2048, not the local one.
 https://docs.python.org/3/using/cmdline.html#id2
 """
 
+import os
 import sys
+
 from py2048 import __version__ as global_version, APPNAME
 
 
 def get_local_version():
     version_line = None
-    with open(f"./{APPNAME}/__init__.py") as init:
+    path = os.path.join(APPNAME, "__init__.py")
+    with open(path) as init:
         for line in init:
             if line.startswith("__version__"):
                 version_line = line
@@ -31,10 +34,14 @@ def get_local_version():
     return eval(version_line.split("=")[-1].strip())
 
 
-if __name__ == "__main__":
+def main() -> None:
     if not sys.flags.isolated:
         my_name = sys.argv[0]
         sys.exit(f"{my_name} must be run with the '-I' flag; aborting.")
     local = get_local_version()
     if local > global_version:
         print(local, end="")
+
+
+if __name__ == "__main__":
+    main()

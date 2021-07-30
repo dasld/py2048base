@@ -41,8 +41,8 @@ from typing import (
 from py2048.cell import Cell
 from py2048.core import SquareGameGrid, Directions, Line, Point, Snapshot
 from py2048.utils import (
-    Base2048Error,
     ExpectationError,
+    GridError,
     NegativeIntegerError,
     classname,
     either_0_power2,
@@ -135,12 +135,12 @@ class Grid(SquareGameGrid):
         # initial state, use `Grid.new_from_snapshot`
         logger.info("Creating a %dx%d Grid instance", side, side)
         if self.STARTING_AMOUNT < 1:
-            raise Base2048Error(
+            raise GridError(
                 "Cannot create a 2048 grid with less than 1 STARTING_AMOUNT"
             )
         side_squared = side * side
         if self.STARTING_AMOUNT > side_squared:
-            raise Base2048Error(
+            raise GridError(
                 "Cannot create a 2048 grid with more than "
                 f"{side_squared} STARTING_AMOUNT's"
             )
@@ -206,7 +206,9 @@ class Grid(SquareGameGrid):
         edge of the board, for example).
         """
 
-        x, y = cell.point + self._SHIFTS[to]
+        shift = self._SHIFTS[to]
+        x = cell.x + shift[0]
+        y = cell.y + shift[1]
         try:
             next_point = Point(x, y)  # NegativeIntegerError
             next_cell = self[next_point]  # KeyError
@@ -297,7 +299,7 @@ class Grid(SquareGameGrid):
         """Ensure a given snapshot has at least one positive value."""
 
         if not any(snapshot.values()):
-            raise ValueError(f"Cannot record an empty snapshot: {snapshot}")
+            raise GridError(f"Cannot record an empty snapshot: {snapshot}")
 
     # -- "public" methods
     # these are the methods expected to be called from outside this
@@ -364,7 +366,7 @@ class Grid(SquareGameGrid):
         side = int(sqrt)
         if side != sqrt:
             name = classname(cls)
-            raise ValueError(f"Cannot create {name} from a non-square mapping")
+            raise GridError(f"Cannot create {name} from a non-square mapping")
         new = cls(side)
         new.update_with_snapshot(snapshot)
         new.store_snapshot(snapshot)
@@ -379,7 +381,7 @@ class Grid(SquareGameGrid):
 
         if len(self.history) < 2:
             if not ignore_empty:
-                raise IndexError(
+                raise GridError(
                     "Cannot undo last movement: too few snapshots available"
                 )
             return False
@@ -419,13 +421,11 @@ class Grid(SquareGameGrid):
         changed: list[Cell] = []
         for cell in random.sample(self.empty_cells, amount):
             if cell:
-                raise Base2048Error(
-                    "A non-zero Cell has been selected for seeding"
-                )
+                raise GridError("A non-zero Cell has been selected for seeding")
             self._set_cell(cell, random.choice(self.SEEDING_VALUES))
             changed.append(cell)
         if not changed:
-            raise Base2048Error("Seeding didn't change the number of any Cell")
+            raise GridError("Seeding didn't change the number of any Cell")
         changed.sort()
         logger.debug(
             "Seeded those cells: %s.",
