@@ -77,6 +77,7 @@ __all__ = [
 
 
 DATA_DIR = Path(appdirs.user_data_dir(appname=APPNAME))
+RowOrCol = Literal["rows", "columns"]
 
 
 # auxiliary classes
@@ -389,23 +390,18 @@ class BaseGameGrid(ABC):
         self.check_integrity()
 
     # -- "public" methods
-    def keys(self, by: Literal["row", "column"] = "row") -> Iterator[Point]:
-        by = by.lower()
+    def keys(self, by: RowOrCol = "rows") -> Iterator[Point]:
         # sorted returns a list
-        if by == "row":
+        if by == "rows":
             return iter(sorted(self.mapping.keys(), key=lambda point: point.y))
-        if by == "column":
+        if by == "columns":
             return iter(sorted(self.mapping.keys()))
-        raise ValueError(f"'by' must be 'row' or 'column', not {by!r}")
+        raise ValueError(f"'by' must be 'rows' or 'columns', not {by!r}")
 
-    def values(
-        self, by: Literal["row", "column"] = "row"
-    ) -> Iterator[CELLCLASS]:
+    def values(self, by: RowOrCol = "rows") -> Iterator[CELLCLASS]:
         return (self.mapping[k] for k in self.keys(by=by))
 
-    def items(
-        self, by: Literal["row", "column"] = "row"
-    ) -> Iterator[tuple[Point, CELLCLASS]]:
+    def items(self, by: RowOrCol = "rows") -> Iterator[tuple[Point, CELLCLASS]]:
         return ((k, self.mapping[k]) for k in self.keys(by=by))
 
     # some synonyms

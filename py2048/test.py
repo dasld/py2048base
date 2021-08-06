@@ -187,7 +187,7 @@ class TestIntGameGrid:
         ):
             assert colA == colB
         #
-        for cell, number in zip(grid.values(by="column"), cells):
+        for cell, number in zip(grid.values(by="columns"), cells):
             assert cell == number
         # try bad indexes
         for bad in range(30):
@@ -205,7 +205,7 @@ class TestIntGameGrid:
             for j, cell in enumerate(row):
                 assert cell == (i * cols) + j
         # check the points accessed directly by rows match the Z shape
-        for cell, number in zip(grid.values(by="row"), range(cells)):
+        for cell, number in zip(grid.values(by="rows"), range(cells)):
             assert cell == number
         # try bad indexes
         for bad in range(30):
